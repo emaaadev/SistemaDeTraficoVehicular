@@ -1,4 +1,6 @@
-﻿namespace SimulacionDeTraficoVehicularAPP.Interfaces
+﻿using SimulacionDeTraficoVehicularAPP.Models;
+
+namespace SimulacionDeTraficoVehicularAPP.Interfaces
 {
     public interface IVehiculo
     {
@@ -8,6 +10,6 @@
         (int X, int Y) Posicion { get; set; }
         void Mover();
         void Detener();
-        void Simular();
+        void Simular(Semaforo semaforo);
     }
 }

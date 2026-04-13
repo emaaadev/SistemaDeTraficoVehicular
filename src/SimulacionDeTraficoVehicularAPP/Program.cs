@@ -20,6 +20,9 @@ namespace SimulacionDeTraficoVehicularAPP
             Console.WriteLine("Interfaces definidas: IVehiculo, ISemaforo, IInterseccion, ISimulacion.");
             Console.WriteLine("Proyecto listo para la siguiente tarea.");
 
+            // Semáforo compartido para todos los vehículos
+            var semaforo = new Semaforo(id: 1, tiempoVerde: 3000, tiempoAmarillo: 1000, tiempoRojo: 3000);
+
             var listaVehiculos = new List<Vehiculo>
             {
                 new Vehiculo(1, "Auto"),
@@ -33,8 +36,10 @@ namespace SimulacionDeTraficoVehicularAPP
 
             Parallel.ForEach(listaVehiculos, opciones, vehiculo =>
             {
-                vehiculo.Simular();
+                vehiculo.Simular(semaforo); // Le pasamos el semaforo compartido
             });
+
+            semaforo.Detener(); // detiene el ciclo del semaforo al finalizar
 
             Console.WriteLine("\nSimulación finalizada.");
         }
@@ -54,5 +59,8 @@ namespace SimulacionDeTraficoVehicularAPP
                 Console.WriteLine($"  Valor inválido. Ingrese un número entre 1 y {limite}.");
             }
         }
+
+
     }
+
 }
