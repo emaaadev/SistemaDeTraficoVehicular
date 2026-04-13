@@ -41,7 +41,7 @@ namespace SimulacionDeTraficoVehicularAPP
 
             semaforo.Detener(); // detiene el ciclo del semaforo al finalizar
 
-            Console.WriteLine("\nSimulación finalizada.");
+            Console.WriteLine("\nSimulación finalizada."); // finaliza ejecucion
         }
 
         private static int SolicitarProcesadores()
