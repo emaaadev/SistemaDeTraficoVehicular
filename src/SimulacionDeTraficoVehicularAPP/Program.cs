@@ -1,4 +1,5 @@
 ﻿using SimulacionDeTraficoVehicularAPP.Interfaces;
+using SimulacionDeTraficoVehicularAPP.Models;
 
 namespace SimulacionDeTraficoVehicularAPP
 {
@@ -18,6 +19,24 @@ namespace SimulacionDeTraficoVehicularAPP
             Console.WriteLine($"\nConfiguración lista: {maxProcesadores} procesadores asignados.");
             Console.WriteLine("Interfaces definidas: IVehiculo, ISemaforo, IInterseccion, ISimulacion.");
             Console.WriteLine("Proyecto listo para la siguiente tarea.");
+
+            var listaVehiculos = new List<Vehiculo>
+            {
+                new Vehiculo(1, "Auto"),
+                new Vehiculo(2, "Bus"),
+                new Vehiculo(3, "Moto"),
+                new Vehiculo(4, "Auto"),
+                new Vehiculo(5, "Bus")
+            };
+
+            Console.WriteLine("\nIniciando simulación...\n");
+
+            Parallel.ForEach(listaVehiculos, opciones, vehiculo =>
+            {
+                vehiculo.Simular();
+            });
+
+            Console.WriteLine("\nSimulación finalizada.");
         }
 
         private static int SolicitarProcesadores()

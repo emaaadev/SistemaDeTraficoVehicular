@@ -8,5 +8,6 @@
         (int X, int Y) Posicion { get; set; }
         void Mover();
         void Detener();
+        void Simular();
     }
 }
