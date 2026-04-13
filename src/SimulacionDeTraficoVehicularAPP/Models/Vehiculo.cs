@@ -63,32 +63,37 @@ namespace SimulacionDeTraficoVehicularAPP.Models
             }
         }
 
-        public void Simular()
+        public void Simular(Semaforo semaforo = null)
         {
             for (int i = 0; i < 10; i++)
             {
                 Thread.Sleep(random.Value.Next(200, 500));
 
-                bool semaforoEnRojo = random.Value.Next(0, 10) < 3;
-                bool decideDetenerse = random.Value.Next(0, 10) < 2;
+                if (semaforo != null && !semaforo.PuedeAvanzar())
+                {
+                    Detener("Semáforo en rojo/amarillo - esperando...");
 
-                if (semaforoEnRojo)
-                {
-                    Detener("Semaforo en rojo");
-                }
-                else if (decideDetenerse)
-                {
-                    Detener("Trafico o decision del conductor");
+                    // Espera activa thread-safe hasta que el semáforo esté en verde
+                    while (!semaforo.PuedeAvanzar())
+                    {
+                        Thread.Sleep(100);
+                    }
+
+                    Mover("Semáforo cambió a verde");
                 }
                 else
                 {
-                    Mover("Via libre");
+                    bool decideDetenerse = random.Value.Next(0, 10) < 2;
+                    if (decideDetenerse)
+                        Detener("Tráfico o decisión del conductor");
+                    else
+                        Mover("Vía libre");
                 }
             }
 
             lock (consoleLock)
             {
-                Console.WriteLine($"[Vehiculo {Id} - {Tipo}] Llego a su destino.\n");
+                Console.WriteLine($"[Vehículo {Id} - {Tipo}] Llegó a su destino.\n");
             }
         }
     }
