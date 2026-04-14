@@ -23,6 +23,12 @@ namespace SimulacionDeTraficoVehicularAPP
             // Semáforo compartido para todos los vehículos
             var semaforo = new Semaforo(id: 1, tiempoVerde: 3000, tiempoAmarillo: 1000, tiempoRojo: 3000);
 
+
+            // Calles e intersección compartidas
+            var calleEntrada = new Calle(1, "Av. Principal", capacidadMaxima: 3);
+            var calleSalida = new Calle(2, "Calle 27", capacidadMaxima: 3);
+            var interseccion = new Interseccion(1, (5, 5), semaforo, calleEntrada, calleSalida);
+
             var listaVehiculos = new List<Vehiculo>
             {
                 new Vehiculo(1, "Auto"),
@@ -36,11 +42,17 @@ namespace SimulacionDeTraficoVehicularAPP
 
             Parallel.ForEach(listaVehiculos, opciones, vehiculo =>
             {
-                vehiculo.Simular(semaforo); // Le pasamos el semaforo compartido
+                // Intentar entrar a la calle 
+                bool entró = calleEntrada.Entrar(vehiculo);
+                if (!entró) return; // calle congestionada
+
+                interseccion.RegistrarVehiculo(vehiculo);
+                vehiculo.Simular(semaforo);
+                interseccion.LiberarVehiculo(vehiculo);
+                calleEntrada.Salir(vehiculo);
             });
 
-            semaforo.Detener(); // detiene el ciclo del semaforo al finalizar
-
+            semaforo.Detener();
             Console.WriteLine("\nSimulación finalizada.");
         }
 
