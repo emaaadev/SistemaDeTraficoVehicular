@@ -1,5 +1,6 @@
 ﻿using SimulacionDeTraficoVehicularAPP.Interfaces;
 using SimulacionDeTraficoVehicularAPP.Models;
+using System.Diagnostics;
 
 namespace SimulacionDeTraficoVehicularAPP
 {
@@ -40,11 +41,13 @@ namespace SimulacionDeTraficoVehicularAPP
 
             Console.WriteLine("\nIniciando simulación...\n");
 
+            var stopwatch = Stopwatch.StartNew();
+
             Parallel.ForEach(listaVehiculos, opciones, vehiculo =>
             {
                 // Intentar entrar a la calle 
-                bool entró = calleEntrada.Entrar(vehiculo);
-                if (!entró) return; // calle congestionada
+                bool entro = calleEntrada.Entrar(vehiculo);
+                if (!entro) return; // calle congestionada
 
                 interseccion.RegistrarVehiculo(vehiculo);
                 vehiculo.Simular(semaforo);
@@ -52,8 +55,12 @@ namespace SimulacionDeTraficoVehicularAPP
                 calleEntrada.Salir(vehiculo);
             });
 
+            stopwatch.Stop();
+
             semaforo.Detener();
             Console.WriteLine("\nSimulación finalizada.");
+
+            Console.WriteLine($"\nTiempo total de ejecucion: {stopwatch.ElapsedMilliseconds} ms");
         }
 
         private static int SolicitarProcesadores()
@@ -71,8 +78,5 @@ namespace SimulacionDeTraficoVehicularAPP
                 Console.WriteLine($"  Valor inválido. Ingrese un número entre 1 y {limite}.");
             }
         }
-
-
     }
-
 }
