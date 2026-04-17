@@ -14,6 +14,8 @@ namespace SimulacionDeTraficoVehicularAPP.Models
         private static readonly ThreadLocal<Random> random =
             new ThreadLocal<Random>(() => new Random());
 
+        private volatile bool _accidenteForzado = false;
+
         public int Id { get; }
         public string Tipo { get; }
         public int VelocidadActual { get; set; }
@@ -63,17 +65,35 @@ namespace SimulacionDeTraficoVehicularAPP.Models
             }
         }
 
-        public void Simular(Semaforo semaforo, DetectorColisiones detector)
+        public void Simular(Semaforo semaforo, DetectorColisiones detector, CancellationToken token = default)
         {
             for (int i = 0; i < 10; i++)
             {
                 Thread.Sleep(random.Value.Next(200, 500));
 
+                if (token.IsCancellationRequested) return;
+
+                if (_accidenteForzado)
+
+                // Ticket #7 - control por teclado
+                if (_accidenteForzado)
+                {
+                    lock (consoleLock)
+                    {
+                        Console.WriteLine($"[Vehículo {Id} - {Tipo}] Accidente forzado. Saliendo de la simulación.");
+                    }
+                    break;
+                }
+
                 if (!semaforo.PuedeAvanzar())
                 {
                     Detener("Semáforo en rojo/amarillo - esperando...");
                     while (!semaforo.PuedeAvanzar())
+                    {
+                        if (_accidenteForzado) return;
+                        if (token.IsCancellationRequested) return;
                         Thread.Sleep(100);
+                    }
                 }
 
                 // Liberar posición anterior antes de moverse
@@ -91,14 +111,23 @@ namespace SimulacionDeTraficoVehicularAPP.Models
                         Console.WriteLine($"[COLISIÓN] Vehículo {Id} ({Tipo}) chocó con Vehículo {colisionCon.Id} ({colisionCon.Tipo}) en ({Posicion.X}, {Posicion.Y})");
                         Console.WriteLine($"Total colisiones hasta ahora: {DetectorColisiones.TotalColisiones}");
                     }
-                    break; // El vehículo queda eliminado de la simulación
+                    break;
                 }
             }
 
-            lock (consoleLock)
+            if (!_accidenteForzado)
             {
-                Console.WriteLine($"[Vehículo {Id} - {Tipo}] Llegó a su destino.\n");
+                lock (consoleLock)
+                {
+                    Console.WriteLine($"[Vehículo {Id} - {Tipo}] Llegó a su destino.\n");
+                }
             }
         }
+        public void ForzarAccidente()
+        {
+            _accidenteForzado = true;
+        }
+
+        public bool TieneAccidente() => _accidenteForzado;
     }
 }

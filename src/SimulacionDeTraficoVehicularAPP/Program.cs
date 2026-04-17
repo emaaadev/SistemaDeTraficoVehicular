@@ -1,4 +1,5 @@
-﻿using SimulacionDeTraficoVehicularAPP.Interfaces;
+﻿using SimulacionDeTraficoVehicularAPP.Controllers;
+using SimulacionDeTraficoVehicularAPP.Interfaces;
 using SimulacionDeTraficoVehicularAPP.Models;
 using System.Diagnostics;
 
@@ -6,7 +7,7 @@ namespace SimulacionDeTraficoVehicularAPP
 {
     internal class Program
     {
-        private static void Main(string[] args)
+        private static async Task Main(string[] args)
         {
             Console.WriteLine(" Simulador de Tráfico Vehicular \n");
 
@@ -40,23 +41,69 @@ namespace SimulacionDeTraficoVehicularAPP
                 new Vehiculo(5, "Bus")
             };
 
+            // Control por teclado
+            using var cts = new CancellationTokenSource();
+            opciones.CancellationToken = cts.Token;
+            var controlador = new ControladorTeclado(cts, listaVehiculos, listaVehiculos.Count);
+            var tareaEscucha = controlador.IniciarEscuchaAsync();
+
             Console.WriteLine("\nIniciando simulación...\n");
 
             var stopwatch = Stopwatch.StartNew();
 
-            Parallel.ForEach(listaVehiculos, opciones, vehiculo =>
-            {
-                // Intentar entrar a la calle 
-                bool entro = calleEntrada.Entrar(vehiculo);
-                if (!entro) return; // calle congestionada
+            var vehiculosProcesados = new HashSet<int>();
+            var lockProcesados = new object();
 
-                interseccion.RegistrarVehiculo(vehiculo);
-                vehiculo.Simular(semaforo, detector); // <-- se le pasa ahora el detector
-                interseccion.LiberarVehiculo(vehiculo);
-                calleEntrada.Salir(vehiculo);
-            });
+            try
+            {
+                while (!cts.Token.IsCancellationRequested)
+                {
+                    List<Vehiculo> pendientes;
+                    lock (listaVehiculos)
+                    {
+                        pendientes = listaVehiculos
+                            .Where(v => { lock (lockProcesados) { return !vehiculosProcesados.Contains(v.Id); } })
+                            .ToList();
+                    }
+
+                    if (pendientes.Count > 0)
+                    {
+                        Parallel.ForEach(pendientes, opciones, vehiculo =>
+                        {
+                            lock (lockProcesados) { vehiculosProcesados.Add(vehiculo.Id); }
+
+                            bool entro = calleEntrada.Entrar(vehiculo);
+                            if (!entro) return;
+
+                            interseccion.RegistrarVehiculo(vehiculo);
+                            vehiculo.Simular(semaforo, detector, cts.Token);
+                            interseccion.LiberarVehiculo(vehiculo);
+                            calleEntrada.Salir(vehiculo);
+                        });
+                    }
+                    else
+                    {
+                        // No hay pendientes — espera un momento por si el usuario agrega uno
+                        Thread.Sleep(300);
+
+                        // Si después de esperar sigue sin pendientes, termina
+                        lock (listaVehiculos)
+                        {
+                            if (listaVehiculos.All(v => { lock (lockProcesados) { return vehiculosProcesados.Contains(v.Id); } }))
+                                break;
+                        }
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                Console.WriteLine("\n[Sistema] Simulación cancelada por el usuario.");
+            }
 
             stopwatch.Stop();
+
+            cts.Cancel(); // cancela el controlador cuando la simulación termina sola
+            try { await tareaEscucha; } catch (OperationCanceledException) { }
 
             semaforo.Detener();
             Console.WriteLine("\nSimulación finalizada.");
