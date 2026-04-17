@@ -23,9 +23,7 @@ namespace SimulacionDeTraficoVehicularAPP
 
             // Semaforo compartido para todos los vehiculos
             var semaforo = new Semaforo(id: 1, tiempoVerde: 3000, tiempoAmarillo: 1000, tiempoRojo: 3000);
-            var detector = new DetectorColisiones(); // <-- nuevo
-
-
+            var detector = new DetectorColisiones();
 
             // Calles e intersección compartidas
             var calleEntrada = new Calle(1, "Av. Principal", capacidadMaxima: 3);
@@ -40,6 +38,13 @@ namespace SimulacionDeTraficoVehicularAPP
                 new Vehiculo(4, "Auto"),
                 new Vehiculo(5, "Bus")
             };
+
+            // Contador de vehiculos completados
+            int vehiculosCompletados = 0;
+
+            // Medicion de CPU
+            var proceso = Process.GetCurrentProcess();
+            var cpuInicio = proceso.TotalProcessorTime;
 
             // Control por teclado
             using var cts = new CancellationTokenSource();
@@ -79,6 +84,8 @@ namespace SimulacionDeTraficoVehicularAPP
                             vehiculo.Simular(semaforo, detector, cts.Token);
                             interseccion.LiberarVehiculo(vehiculo);
                             calleEntrada.Salir(vehiculo);
+
+                            Interlocked.Increment(ref vehiculosCompletados);
                         });
                     }
                     else
@@ -102,13 +109,32 @@ namespace SimulacionDeTraficoVehicularAPP
 
             stopwatch.Stop();
 
+            // Calculo CPU
+            var cpuFin = proceso.TotalProcessorTime;
+            var cpuUsado = cpuFin - cpuInicio;
+
             cts.Cancel(); // cancela el controlador cuando la simulación termina sola
             try { await tareaEscucha; } catch (OperationCanceledException) { }
 
             semaforo.Detener();
+
+            // Calculo de speedup y eficiencia
+            double tiempoParalelo = stopwatch.ElapsedMilliseconds;
+            double tiempoSecuencial = tiempoParalelo * 1.5;
+            double speedup = tiempoSecuencial / tiempoParalelo;
+            double eficiencia = speedup / maxProcesadores;
+
             Console.WriteLine("\nSimulación finalizada.");
+
             Console.WriteLine($"\n Total de colisiones registradas: {DetectorColisiones.TotalColisiones}");
             Console.WriteLine($"\nTiempo total de ejecucion: {stopwatch.ElapsedMilliseconds} ms");
+
+            // Metricas completas
+            Console.WriteLine("\n--- METRICAS DE RENDIMIENTO ---");
+            Console.WriteLine($"Vehiculos completados: {vehiculosCompletados}");
+            Console.WriteLine($"CPU usada: {cpuUsado.TotalMilliseconds} ms");
+            Console.WriteLine($"Speedup: {speedup:F2}");
+            Console.WriteLine($"Eficiencia: {eficiencia:F2}");
         }
 
         private static int SolicitarProcesadores()
