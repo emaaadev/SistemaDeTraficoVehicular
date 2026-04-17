@@ -36,7 +36,7 @@ namespace SimulacionDeTraficoVehicularAPP.Models
             {
                 if (_vehiculosEnInterior.Contains(vehiculo.Id))
                 {
-                    Console.WriteLine($"[Intersección {Id}] ⚠ COLISIÓN detectada — Vehículo {vehiculo.Id} ya estaba registrado.");
+                    Console.WriteLine($"[Intersección {Id}] COLISIÓN detectada — Vehículo {vehiculo.Id} ya estaba registrado.");
                     return;
                 }
 

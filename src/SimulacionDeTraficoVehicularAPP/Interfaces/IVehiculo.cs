@@ -10,6 +10,6 @@ namespace SimulacionDeTraficoVehicularAPP.Interfaces
         (int X, int Y) Posicion { get; set; }
         void Mover();
         void Detener();
-        void Simular(Semaforo semaforo);
+        void Simular(Semaforo semaforo, DetectorColisiones detector);
     }
 }
