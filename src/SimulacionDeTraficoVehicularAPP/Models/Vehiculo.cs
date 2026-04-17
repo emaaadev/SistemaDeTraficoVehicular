@@ -63,31 +63,35 @@ namespace SimulacionDeTraficoVehicularAPP.Models
             }
         }
 
-        public void Simular(Semaforo semaforo = null)
+        public void Simular(Semaforo semaforo, DetectorColisiones detector)
         {
             for (int i = 0; i < 10; i++)
             {
                 Thread.Sleep(random.Value.Next(200, 500));
 
-                if (semaforo != null && !semaforo.PuedeAvanzar())
+                if (!semaforo.PuedeAvanzar())
                 {
                     Detener("Semáforo en rojo/amarillo - esperando...");
-
-                    // Espera activa thread-safe hasta que el semáforo esté en verde
                     while (!semaforo.PuedeAvanzar())
-                    {
                         Thread.Sleep(100);
-                    }
-
-                    Mover("Semáforo cambió a verde");
                 }
-                else
+
+                // Liberar posición anterior antes de moverse
+                detector.LiberarPosicion(this);
+
+                Mover("Vía libre");
+
+                // Registrar nueva posición y verificar colisión
+                var colisionCon = detector.RegistrarPosicion(this);
+
+                if (colisionCon != null)
                 {
-                    bool decideDetenerse = random.Value.Next(0, 10) < 2;
-                    if (decideDetenerse)
-                        Detener("Tráfico o decisión del conductor");
-                    else
-                        Mover("Vía libre");
+                    lock (consoleLock)
+                    {
+                        Console.WriteLine($"[COLISIÓN] Vehículo {Id} ({Tipo}) chocó con Vehículo {colisionCon.Id} ({colisionCon.Tipo}) en ({Posicion.X}, {Posicion.Y})");
+                        Console.WriteLine($"Total colisiones hasta ahora: {DetectorColisiones.TotalColisiones}");
+                    }
+                    break; // El vehículo queda eliminado de la simulación
                 }
             }
 

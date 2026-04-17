@@ -18,11 +18,12 @@ namespace SimulacionDeTraficoVehicularAPP
             };
 
             Console.WriteLine($"\nConfiguración lista: {maxProcesadores} procesadores asignados.");
-            Console.WriteLine("Interfaces definidas: IVehiculo, ISemaforo, IInterseccion, ISimulacion.");
             Console.WriteLine("Proyecto listo para la siguiente tarea.");
 
-            // Semáforo compartido para todos los vehículos
+            // Semaforo compartido para todos los vehiculos
             var semaforo = new Semaforo(id: 1, tiempoVerde: 3000, tiempoAmarillo: 1000, tiempoRojo: 3000);
+            var detector = new DetectorColisiones(); // <-- nuevo
+
 
 
             // Calles e intersección compartidas
@@ -50,7 +51,7 @@ namespace SimulacionDeTraficoVehicularAPP
                 if (!entro) return; // calle congestionada
 
                 interseccion.RegistrarVehiculo(vehiculo);
-                vehiculo.Simular(semaforo);
+                vehiculo.Simular(semaforo, detector); // <-- se le pasa ahora el detector
                 interseccion.LiberarVehiculo(vehiculo);
                 calleEntrada.Salir(vehiculo);
             });
@@ -59,7 +60,7 @@ namespace SimulacionDeTraficoVehicularAPP
 
             semaforo.Detener();
             Console.WriteLine("\nSimulación finalizada.");
-
+            Console.WriteLine($"\n Total de colisiones registradas: {DetectorColisiones.TotalColisiones}");
             Console.WriteLine($"\nTiempo total de ejecucion: {stopwatch.ElapsedMilliseconds} ms");
         }
 
