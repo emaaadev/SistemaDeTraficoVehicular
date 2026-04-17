@@ -130,7 +130,7 @@ namespace SimulacionDeTraficoVehicularAPP.Tests
         {
             var semaforo = new Semaforo(id: 1, tiempoVerde: 100, tiempoAmarillo: 50, tiempoRojo: 10000);
             var vehiculo = new Vehiculo(1, "Auto");
-
+            var detector = new DetectorColisiones();
             // Forzar rojo
             Thread.Sleep(250);
             Assert.Equal(EstadoSemaforo.Rojo, semaforo.Estado);
@@ -139,7 +139,7 @@ namespace SimulacionDeTraficoVehicularAPP.Tests
 
             var tarea = Task.Run(() =>
             {
-                vehiculo.Simular(semaforo);
+                vehiculo.Simular(semaforo, detector);
                 simulacionTermino = true;
             });
 
