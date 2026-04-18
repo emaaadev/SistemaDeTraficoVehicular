@@ -19,9 +19,10 @@ namespace SimulacionDeTraficoVehicularAPP.Models
 
                 if (_posiciones.TryGetValue(pos, out IVehiculo? otro) && otro.Id != vehiculo.Id)
                 {
-                    // Colision detectada
                     Interlocked.Increment(ref _contadorColisiones);
                     _posiciones.Remove(pos);
+                    EliminarVehiculo(vehiculo.Id);  // <-- eliminar ambos
+                    EliminarVehiculo(otro.Id);
                     return otro;
                 }
 
@@ -43,6 +44,24 @@ namespace SimulacionDeTraficoVehicularAPP.Models
         public static void ResetContador()
         {
             Interlocked.Exchange(ref _contadorColisiones, 0);
+        }
+
+        private readonly HashSet<int> _vehiculosEliminados = new();
+
+        public bool EstaEliminado(int vehiculoId)
+        {
+            lock (_posicionesLock)
+            {
+                return _vehiculosEliminados.Contains(vehiculoId);
+            }
+        }
+
+        private void EliminarVehiculo(int vehiculoId)
+        {
+            lock (_posicionesLock)
+            {
+                _vehiculosEliminados.Add(vehiculoId);
+            }
         }
     }
 }
