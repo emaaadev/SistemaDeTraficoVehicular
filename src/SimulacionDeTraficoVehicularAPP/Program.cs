@@ -21,6 +21,29 @@ namespace SimulacionDeTraficoVehicularAPP
             Console.WriteLine($"\nConfiguración lista: {maxProcesadores} procesadores asignados.");
             Console.WriteLine("Proyecto listo para la siguiente tarea.");
 
+            // ─── VERSION SECUENCIAL (baseline) ───
+            Console.WriteLine("\n[ Ejecutando version secuencial como baseline... ]\n");
+            var semaforoSec = new Semaforo(id: 2, tiempoVerde: 3000, tiempoAmarillo: 1000, tiempoRojo: 3000);
+            var detectorSec = new DetectorColisiones();
+            var vehiculosSec = new List<Vehiculo>
+            {
+                new Vehiculo(1, "Auto"),
+                new Vehiculo(2, "Bus"),
+                new Vehiculo(3, "Moto"),
+                new Vehiculo(4, "Auto"),
+                new Vehiculo(5, "Bus")
+            };
+
+            var swSec = Stopwatch.StartNew();
+            foreach (var v in vehiculosSec)
+                v.Simular(semaforoSec, detectorSec);
+            swSec.Stop();
+            semaforoSec.Detener();
+            double tiempoSecuencial = swSec.Elapsed.TotalSeconds;
+            Console.WriteLine($"\n Tiempo secuencial (version secuencial): {tiempoSecuencial:F2} ms\n");
+
+
+            // ─── VERSION PARALELA (baseline) ───
             // Semaforo compartido para todos los vehiculos
             var semaforo = new Semaforo(id: 1, tiempoVerde: 3000, tiempoAmarillo: 1000, tiempoRojo: 3000);
             var detector = new DetectorColisiones();
@@ -52,6 +75,7 @@ namespace SimulacionDeTraficoVehicularAPP
             var controlador = new ControladorTeclado(cts, listaVehiculos, listaVehiculos.Count);
             var tareaEscucha = controlador.IniciarEscuchaAsync();
 
+            Console.WriteLine("\n[ Ejecutando version paralela como baseline... ]\n");
             Console.WriteLine("\nIniciando simulación...\n");
 
             var stopwatch = Stopwatch.StartNew();
@@ -119,8 +143,7 @@ namespace SimulacionDeTraficoVehicularAPP
             semaforo.Detener();
 
             // Calculo de speedup y eficiencia
-            double tiempoParalelo = stopwatch.ElapsedMilliseconds;
-            double tiempoSecuencial = tiempoParalelo * 1.5;
+            double tiempoParalelo = stopwatch.Elapsed.TotalSeconds;
             double speedup = tiempoSecuencial / tiempoParalelo;
             double eficiencia = speedup / maxProcesadores;
 
@@ -133,8 +156,8 @@ namespace SimulacionDeTraficoVehicularAPP
             Console.WriteLine("\n--- METRICAS DE RENDIMIENTO ---");
             Console.WriteLine($"Vehiculos completados: {vehiculosCompletados}");
             Console.WriteLine($"CPU usada: {cpuUsado.TotalMilliseconds} ms");
-            Console.WriteLine($"Speedup: {speedup:F2}");
-            Console.WriteLine($"Eficiencia: {eficiencia:F2}");
+            Console.WriteLine($"Speedup: {speedup:F2}x");
+            Console.WriteLine($"Eficiencia: {eficiencia:P2}");
         }
 
         private static int SolicitarProcesadores()
