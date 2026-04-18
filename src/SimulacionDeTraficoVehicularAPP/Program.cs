@@ -147,17 +147,20 @@ namespace SimulacionDeTraficoVehicularAPP
             double speedup = tiempoSecuencial / tiempoParalelo;
             double eficiencia = speedup / maxProcesadores;
 
-            Console.WriteLine("\nSimulación finalizada.");
-
-            Console.WriteLine($"\n Total de colisiones registradas: {DetectorColisiones.TotalColisiones}");
-            Console.WriteLine($"\nTiempo total de ejecucion: {stopwatch.ElapsedMilliseconds} ms");
-
-            // Metricas completas
-            Console.WriteLine("\n--- METRICAS DE RENDIMIENTO ---");
-            Console.WriteLine($"Vehiculos completados: {vehiculosCompletados}");
-            Console.WriteLine($"CPU usada: {cpuUsado.TotalMilliseconds} ms");
-            Console.WriteLine($"Speedup: {speedup:F2}x");
-            Console.WriteLine($"Eficiencia: {eficiencia:P2}");
+            Console.WriteLine("\n╔══════════════════════════════════════════╗");
+            Console.WriteLine("║       REPORTE FINAL DE SIMULACIÓN        ║");
+            Console.WriteLine("╠══════════════════════════════════════════╣");
+            Console.WriteLine($"║  Vehículos completados : {vehiculosCompletados.ToString(),-16}║");
+            Console.WriteLine($"║  Colisiones detectadas : {DetectorColisiones.TotalColisiones.ToString(),-16}║");
+            Console.WriteLine($"║  Procesadores usados   : {maxProcesadores.ToString(),-16}║");
+            Console.WriteLine("╠══════════════════════════════════════════╣");
+            Console.WriteLine($"║  Tiempo secuencial     : {(tiempoSecuencial.ToString("F2") + " s"),-16}║");
+            Console.WriteLine($"║  Tiempo paralelo       : {(tiempoParalelo.ToString("F2") + " s"),-16}║");
+            Console.WriteLine($"║  CPU usada             : {(cpuUsado.TotalMilliseconds.ToString("F0") + " ms"),-16}║");
+            Console.WriteLine("╠══════════════════════════════════════════╣");
+            Console.WriteLine($"║  Speedup               : {(speedup.ToString("F2") + "x"),-16}║");
+            Console.WriteLine($"║  Eficiencia            : {eficiencia.ToString("P2"),-16}║");
+            Console.WriteLine("╚══════════════════════════════════════════╝");
         }
 
         private static int SolicitarProcesadores()
