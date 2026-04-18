@@ -67,11 +67,14 @@ namespace SimulacionDeTraficoVehicularAPP.Models
 
         public void Simular(Semaforo semaforo, DetectorColisiones detector, CancellationToken token = default)
         {
+            bool colisiono = false;
+
             for (int i = 0; i < 10; i++)
             {
                 Thread.Sleep(random.Value.Next(200, 500));
 
                 if (token.IsCancellationRequested) return;
+                if (detector.EstaEliminado(Id)) return;
 
                 if (_accidenteForzado)
 
@@ -96,12 +99,12 @@ namespace SimulacionDeTraficoVehicularAPP.Models
                     }
                 }
 
-                // Liberar posición anterior antes de moverse
+                // Liberar posicion anterior antes de moverse
                 detector.LiberarPosicion(this);
 
                 Mover("Vía libre");
 
-                // Registrar nueva posición y verificar colisión
+                // Registrar nueva posicion y verificar colision
                 var colisionCon = detector.RegistrarPosicion(this);
 
                 if (colisionCon != null)
@@ -111,11 +114,12 @@ namespace SimulacionDeTraficoVehicularAPP.Models
                         Console.WriteLine($"[COLISIÓN] Vehículo {Id} ({Tipo}) chocó con Vehículo {colisionCon.Id} ({colisionCon.Tipo}) en ({Posicion.X}, {Posicion.Y})");
                         Console.WriteLine($"Total colisiones hasta ahora: {DetectorColisiones.TotalColisiones}");
                     }
+                    colisiono = true; // <-- marcar colison
                     break;
                 }
             }
 
-            if (!_accidenteForzado)
+            if (!colisiono && !_accidenteForzado)
             {
                 lock (consoleLock)
                 {
