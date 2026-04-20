@@ -47,6 +47,8 @@ namespace SimulacionDeTraficoVehicularAPP.Models
             }
         }
 
+
+
         public void Mover(string razon)
         {
             Posicion = (Posicion.X + VelocidadActual, Posicion.Y);
@@ -69,7 +71,17 @@ namespace SimulacionDeTraficoVehicularAPP.Models
         {
             bool colisiono = false;
 
-            for (int i = 0; i < 10; i++)
+            int velocidadBase = Tipo switch
+            {
+                "Moto" => random.Value.Next(3, 7),
+                "Auto" => random.Value.Next(2, 5),
+                "Bus" => random.Value.Next(1, 3),
+                _ => 2
+            };
+
+            VelocidadActual = velocidadBase;
+
+            while (true)
             {
                 Thread.Sleep(random.Value.Next(200, 500));
 
@@ -90,17 +102,40 @@ namespace SimulacionDeTraficoVehicularAPP.Models
 
                 if (!semaforo.PuedeAvanzar())
                 {
-                    Detener("Semáforo en rojo/amarillo - esperando...");
-                    while (!semaforo.PuedeAvanzar())
+                    if (Tipo == "Moto" && random.Value.Next(100) < 30)
                     {
-                        if (_accidenteForzado) return;
-                        if (token.IsCancellationRequested) return;
-                        Thread.Sleep(100);
+                        Mover("Ignora semaforo (Moto)");
+                    }
+                    else
+                    {
+                        Detener("Semaforo en rojo/amarillo - esperando...");
+                        while (!semaforo.PuedeAvanzar())
+                        {
+                            if (token.IsCancellationRequested) return;
+                            Thread.Sleep(100);
+                        }
                     }
                 }
 
                 // Liberar posicion anterior antes de moverse
                 detector.LiberarPosicion(this);
+
+                int probabilidadColision = Tipo switch
+                {
+                    "Moto" => 20, // mas riesgo
+                    "Auto" => 10,
+                    "Bus" => 5, // mas seguro
+                    _ => 10
+                };
+
+                if (random.Value.Next(100) < probabilidadColision)
+                {
+                    lock (consoleLock)
+                    {
+                        Console.WriteLine($"[Vehículo {Id} - {Tipo}] Colisión por comportamiento propio.");
+                    }
+                    break;
+                }
 
                 Mover("Vía libre");
 
@@ -115,6 +150,16 @@ namespace SimulacionDeTraficoVehicularAPP.Models
                         Console.WriteLine($"Total colisiones hasta ahora: {DetectorColisiones.TotalColisiones}");
                     }
                     colisiono = true; // <-- marcar colison
+                    break;
+                }
+
+                // Condicion de llegada (meta aleatoria)
+                if (Posicion.X >= random.Value.Next(20, 50))
+                {
+                    lock (consoleLock)
+                    {
+                        Console.WriteLine($"[Vehículo {Id} - {Tipo}] Llegó a su destino.\n");
+                    }
                     break;
                 }
             }

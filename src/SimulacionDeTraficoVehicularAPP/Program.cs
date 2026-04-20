@@ -95,21 +95,44 @@ namespace SimulacionDeTraficoVehicularAPP
                             .ToList();
                     }
 
+                    var zonas = new Dictionary<string, List<Vehiculo>>
+                    {
+                        { "Norte", new List<Vehiculo>() },
+                        { "Sur", new List<Vehiculo>() },
+                        { "Centro", new List<Vehiculo>() }
+                    };
+
+                    // Distribuir vehiculos en zonas
+                    int index = 0;
+                    foreach (var v in listaVehiculos)
+                    {
+                        var zona = zonas.Keys.ElementAt(index % zonas.Count);
+                        zonas[zona].Add(v);
+                        index++;
+                    }
+
                     if (pendientes.Count > 0)
                     {
-                        Parallel.ForEach(pendientes, opciones, vehiculo =>
+                        Parallel.ForEach(zonas, opciones, zona =>
                         {
-                            lock (lockProcesados) { vehiculosProcesados.Add(vehiculo.Id); }
+                            Console.WriteLine($"\n[ZONA {zona.Key}] Iniciando simulacion...\n");
 
-                            bool entro = calleEntrada.Entrar(vehiculo);
-                            if (!entro) return;
+                            foreach (var vehiculo in zona.Value)
+                            {
+                                lock (lockProcesados) { vehiculosProcesados.Add(vehiculo.Id); }
 
-                            interseccion.RegistrarVehiculo(vehiculo);
-                            vehiculo.Simular(semaforo, detector, cts.Token);
-                            interseccion.LiberarVehiculo(vehiculo);
-                            calleEntrada.Salir(vehiculo);
+                                bool entro = calleEntrada.Entrar(vehiculo);
+                                if (!entro) continue;
 
-                            Interlocked.Increment(ref vehiculosCompletados);
+                                interseccion.RegistrarVehiculo(vehiculo);
+
+                                vehiculo.Simular(semaforo, detector, cts.Token);
+
+                                interseccion.LiberarVehiculo(vehiculo);
+                                calleEntrada.Salir(vehiculo);
+
+                                Interlocked.Increment(ref vehiculosCompletados);
+                            }
                         });
                     }
                     else
