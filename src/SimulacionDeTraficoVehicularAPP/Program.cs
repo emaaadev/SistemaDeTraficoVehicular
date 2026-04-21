@@ -1,6 +1,7 @@
 ﻿using SimulacionDeTraficoVehicularAPP.Controllers;
 using SimulacionDeTraficoVehicularAPP.Interfaces;
 using SimulacionDeTraficoVehicularAPP.Models;
+using System.ComponentModel;
 using System.Diagnostics;
 
 namespace SimulacionDeTraficoVehicularAPP
@@ -9,7 +10,7 @@ namespace SimulacionDeTraficoVehicularAPP
     {
         private static async Task Main(string[] args)
         {
-            Console.WriteLine(" Simulador de Tráfico Vehicular \n");
+            Console.WriteLine("Simulador de Tráfico Vehicular \n");
 
             int maxProcesadores = SolicitarProcesadores();
 
@@ -18,6 +19,7 @@ namespace SimulacionDeTraficoVehicularAPP
                 MaxDegreeOfParallelism = maxProcesadores
             };
 
+            
             Console.WriteLine($"\nConfiguración lista: {maxProcesadores} procesadores asignados.");
             Console.WriteLine("Proyecto listo para la siguiente tarea.");
 
@@ -25,6 +27,12 @@ namespace SimulacionDeTraficoVehicularAPP
             Console.WriteLine("\n[ Ejecutando version secuencial como baseline... ]\n");
             var semaforoSec = new Semaforo(id: 2, tiempoVerde: 3000, tiempoAmarillo: 1000, tiempoRojo: 3000);
             var detectorSec = new DetectorColisiones();
+
+        // TODO: HACER QUE GENERE VEHICULOS DE MANERA ALEATORIA USANDO TASK 
+        // TODO: CREAR 3 SEMAFOROS PARA CADA ZONA Y QUE SE PUEDA AGREGAR VEHICULOS EN ZONAS 
+        // TODO: AGREGAR TIPO DE VEHICULO CAMION
+        // TODO: QUE SE AGREGUEN DE MANERA ALEATORIA
+ 
             var vehiculosSec = new List<Vehiculo>
             {
                 new Vehiculo(1, "Auto"),
