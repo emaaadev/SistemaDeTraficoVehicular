@@ -23,24 +23,67 @@ namespace SimulacionDeTraficoVehicularAPP
             Console.WriteLine($"\nConfiguración lista: {maxProcesadores} procesadores asignados.");
             Console.WriteLine("Proyecto listo para la siguiente tarea.");
 
+            // Generación aleatoria de vehículos por zona usando Task
+            var tipos = new[] { "Auto", "Bus", "Moto", "Camion" };
+            var listaVehiculos = new List<Vehiculo>();
+            int idCounter = 0;
+
+            var tareasGeneracion = new List<Task>
+            {
+                Task.Run(() =>
+                {
+                    int cant = new Random().Next(3, 10);
+                    for (int i = 0; i < cant; i++)
+                    {
+                        int id = Interlocked.Increment(ref idCounter);
+                        string tipo = tipos[new Random().Next(tipos.Length)];
+                        var v = new Vehiculo(id, tipo, "Norte");
+                        lock (listaVehiculos) { listaVehiculos.Add(v); }
+                        Console.WriteLine($"[Norte] Vehículo {v.Id} ({v.Tipo}) generado — Task ID: {Task.CurrentId} — Hilo: {Thread.CurrentThread.ManagedThreadId}");
+                    }
+                }),
+                Task.Run(() =>
+                {
+                    int cant = new Random().Next(3, 10);
+                    for (int i = 0; i < cant; i++)
+                    {
+                        int id = Interlocked.Increment(ref idCounter);
+                        string tipo = tipos[new Random().Next(tipos.Length)];
+                        var v = new Vehiculo(id, tipo, "Sur");
+                        lock (listaVehiculos) { listaVehiculos.Add(v); }
+                        Console.WriteLine($"[Sur] Vehículo {v.Id} ({v.Tipo}) generado — Task ID: {Task.CurrentId} — Hilo: {Thread.CurrentThread.ManagedThreadId}");
+                    }
+                }),
+                Task.Run(() =>
+                {
+                    int cant = new Random().Next(3, 10);
+                    for (int i = 0; i < cant; i++)
+                    {
+                        int id = Interlocked.Increment(ref idCounter);
+                        string tipo = tipos[new Random().Next(tipos.Length)];
+                        var v = new Vehiculo(id, tipo, "Centro");
+                        lock (listaVehiculos) { listaVehiculos.Add(v); }
+                        Console.WriteLine($"[Centro] Vehículo {v.Id} ({v.Tipo}) generado — Task ID: {Task.CurrentId} — Hilo: {Thread.CurrentThread.ManagedThreadId}");
+                    }
+                })
+            };
+
+            await Task.WhenAll(tareasGeneracion);
+            Console.WriteLine($"\nTotal vehículos generados: {listaVehiculos.Count}\n");
+
             // ─── VERSION SECUENCIAL (baseline) ───
             Console.WriteLine("\n[ Ejecutando version secuencial como baseline... ]\n");
-            var semaforoSec = new Semaforo(id: 2, tiempoVerde: 3000, tiempoAmarillo: 1000, tiempoRojo: 3000);
+            var semaforoSec = new Semaforo(id: 4, tiempoVerde: 3000, tiempoAmarillo: 1000, tiempoRojo: 3000);
             var detectorSec = new DetectorColisiones();
 
-        // TODO: HACER QUE GENERE VEHICULOS DE MANERA ALEATORIA USANDO TASK 
-        // TODO: CREAR 3 SEMAFOROS PARA CADA ZONA Y QUE SE PUEDA AGREGAR VEHICULOS EN ZONAS 
-        // TODO: AGREGAR TIPO DE VEHICULO CAMION
-        // TODO: QUE SE AGREGUEN DE MANERA ALEATORIA
- 
-            var vehiculosSec = new List<Vehiculo>
-            {
-                new Vehiculo(1, "Auto"),
-                new Vehiculo(2, "Bus"),
-                new Vehiculo(3, "Moto"),
-                new Vehiculo(4, "Auto"),
-                new Vehiculo(5, "Bus")
-            };
+            // TODO: HACER QUE GENERE VEHICULOS DE MANERA ALEATORIA USANDO TASK 
+            // TODO: CREAR 3 SEMAFOROS PARA CADA ZONA Y QUE SE PUEDA AGREGAR VEHICULOS EN ZONAS 
+            // TODO: AGREGAR TIPO DE VEHICULO CAMION
+            // TODO: QUE SE AGREGUEN DE MANERA ALEATORIA
+
+            var vehiculosSec = listaVehiculos
+                .Select(v => new Vehiculo(v.Id, v.Tipo, v.Zona))
+                .ToList();
 
             var swSec = Stopwatch.StartNew();
             foreach (var v in vehiculosSec)
@@ -53,22 +96,27 @@ namespace SimulacionDeTraficoVehicularAPP
 
             // ─── VERSION PARALELA (baseline) ───
             // Semaforo compartido para todos los vehiculos
-            var semaforo = new Semaforo(id: 1, tiempoVerde: 3000, tiempoAmarillo: 1000, tiempoRojo: 3000);
             var detector = new DetectorColisiones();
 
-            // Calles e intersección compartidas
-            var calleEntrada = new Calle(1, "Av. Principal", capacidadMaxima: 3);
-            var calleSalida = new Calle(2, "Calle 27", capacidadMaxima: 3);
-            var interseccion = new Interseccion(1, (5, 5), semaforo, calleEntrada, calleSalida);
+            // 3 zonas con su propio semáforo, calle e intersección
+            var semaforoNorte = new Semaforo(id: 1, tiempoVerde: 3000, tiempoAmarillo: 1000, tiempoRojo: 3000);
+            var semaforoSur = new Semaforo(id: 2, tiempoVerde: 2000, tiempoAmarillo: 1000, tiempoRojo: 4000);
+            var semaforoCentro = new Semaforo(id: 3, tiempoVerde: 4000, tiempoAmarillo: 1000, tiempoRojo: 2000);
 
-            var listaVehiculos = new List<Vehiculo>
-            {
-                new Vehiculo(1, "Auto"),
-                new Vehiculo(2, "Bus"),
-                new Vehiculo(3, "Moto"),
-                new Vehiculo(4, "Auto"),
-                new Vehiculo(5, "Bus")
-            };
+            var calleNorte = new Calle(1, "Zona Norte", capacidadMaxima: 3);
+            var calleSur = new Calle(2, "Zona Sur", capacidadMaxima: 3);
+            var calleCentro = new Calle(3, "Zona Centro", capacidadMaxima: 3);
+
+            var interseccionNorte = new Interseccion(1, (5, 5), semaforoNorte, calleNorte, calleNorte);
+            var interseccionSur = new Interseccion(2, (10, 10), semaforoSur, calleSur, calleSur);
+            var interseccionCentro = new Interseccion(3, (15, 15), semaforoCentro, calleCentro, calleCentro);
+
+            var zonaInfraestructura = new Dictionary<string, (Semaforo semaforo, Calle calle, Interseccion interseccion)>
+        {
+            { "Norte",  (semaforoNorte,  calleNorte,  interseccionNorte)  },
+            { "Sur",    (semaforoSur,    calleSur,    interseccionSur)    },
+            { "Centro", (semaforoCentro, calleCentro, interseccionCentro) }
+        };
 
             // Contador de vehiculos completados
             int vehiculosCompletados = 0;
@@ -102,45 +150,24 @@ namespace SimulacionDeTraficoVehicularAPP
                             .Where(v => { lock (lockProcesados) { return !vehiculosProcesados.Contains(v.Id); } })
                             .ToList();
                     }
-
-                    var zonas = new Dictionary<string, List<Vehiculo>>
-                    {
-                        { "Norte", new List<Vehiculo>() },
-                        { "Sur", new List<Vehiculo>() },
-                        { "Centro", new List<Vehiculo>() }
-                    };
-
-                    // Distribuir vehiculos en zonas
-                    int index = 0;
-                    foreach (var v in listaVehiculos)
-                    {
-                        var zona = zonas.Keys.ElementAt(index % zonas.Count);
-                        zonas[zona].Add(v);
-                        index++;
-                    }
-
+                                    
                     if (pendientes.Count > 0)
                     {
-                        Parallel.ForEach(zonas, opciones, zona =>
+                        Parallel.ForEach(pendientes, opciones, vehiculo =>
                         {
-                            Console.WriteLine($"\n[ZONA {zona.Key}] Iniciando simulacion...\n");
+                            lock (lockProcesados) { vehiculosProcesados.Add(vehiculo.Id); }
 
-                            foreach (var vehiculo in zona.Value)
-                            {
-                                lock (lockProcesados) { vehiculosProcesados.Add(vehiculo.Id); }
+                            var (semaforo, calle, interseccion) = zonaInfraestructura[vehiculo.Zona];
 
-                                bool entro = calleEntrada.Entrar(vehiculo);
-                                if (!entro) continue;
+                            bool entro = calle.Entrar(vehiculo);
+                            if (!entro) return;
 
-                                interseccion.RegistrarVehiculo(vehiculo);
+                            interseccion.RegistrarVehiculo(vehiculo);
+                            vehiculo.Simular(semaforo, detector, cts.Token);
+                            interseccion.LiberarVehiculo(vehiculo);
+                            calle.Salir(vehiculo);
 
-                                vehiculo.Simular(semaforo, detector, cts.Token);
-
-                                interseccion.LiberarVehiculo(vehiculo);
-                                calleEntrada.Salir(vehiculo);
-
-                                Interlocked.Increment(ref vehiculosCompletados);
-                            }
+                            Interlocked.Increment(ref vehiculosCompletados);
                         });
                     }
                     else
@@ -171,7 +198,9 @@ namespace SimulacionDeTraficoVehicularAPP
             cts.Cancel(); // cancela el controlador cuando la simulación termina sola
             try { await tareaEscucha; } catch (OperationCanceledException) { }
 
-            semaforo.Detener();
+            semaforoNorte.Detener();
+            semaforoSur.Detener();
+            semaforoCentro.Detener();
 
             // Calculo de speedup y eficiencia
             double tiempoParalelo = stopwatch.Elapsed.TotalSeconds;
