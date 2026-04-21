@@ -69,6 +69,7 @@ namespace SimulacionDeTraficoVehicularAPP.Models
 
         public void Simular(Semaforo semaforo, DetectorColisiones detector, CancellationToken token = default)
         {
+            // TODO: AQUI AGREGAR CAMION PON LA TASA DE ALEATORIEDAD QUE PREFIERAS
             bool colisiono = false;
 
             int velocidadBase = Tipo switch
