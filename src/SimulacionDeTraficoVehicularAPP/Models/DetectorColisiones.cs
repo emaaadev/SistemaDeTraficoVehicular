@@ -56,7 +56,7 @@ namespace SimulacionDeTraficoVehicularAPP.Models
             }
         }
 
-        private void EliminarVehiculo(int vehiculoId)
+        public void EliminarVehiculo(int vehiculoId)
         {
             lock (_posicionesLock)
             {
