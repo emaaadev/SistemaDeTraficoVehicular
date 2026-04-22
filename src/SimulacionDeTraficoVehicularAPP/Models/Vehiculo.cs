@@ -74,6 +74,8 @@ namespace SimulacionDeTraficoVehicularAPP.Models
             // TODO: AQUI AGREGAR CAMION PON LA TASA DE ALEATORIEDAD QUE PREFIERAS
             bool colisiono = false;
 
+            int meta = random.Value.Next(20, 50); // CAMBIO: meta fija, antes estaba dentro del loop evaluandose cada iteracion
+
             int velocidadBase = Tipo switch
             {
                 "Moto" => random.Value.Next(3, 7),
@@ -124,13 +126,15 @@ namespace SimulacionDeTraficoVehicularAPP.Models
                 // Liberar posicion anterior antes de moverse
                 detector.LiberarPosicion(this);
 
+                // probabilidades reducidas para que la colision sea ocasional (1-2% por iteración)
+                // Ahora: Moto=2, Auto=1, Bus=1, Camion=1
                 int probabilidadColision = Tipo switch
                 {
-                    "Moto" => 20, // mas riesgo
-                    "Auto" => 10,
-                    "Bus" => 5, // mas seguro
-                    "Camion" => 5,
-                    _ => 10
+                    "Moto" => 2, 
+                    "Auto" => 1,
+                    "Bus" => 1, 
+                    "Camion" => 1,
+                    _ => 1
                 };
 
                 if (random.Value.Next(100) < probabilidadColision)
@@ -139,6 +143,8 @@ namespace SimulacionDeTraficoVehicularAPP.Models
                     {
                         Console.WriteLine($"[Vehículo {Id} - {Tipo}] Colisión por comportamiento propio.");
                     }
+                    colisiono = true; 
+                    detector.EliminarVehiculo(Id);
                     break;
                 }
 
@@ -169,7 +175,7 @@ namespace SimulacionDeTraficoVehicularAPP.Models
                 }
             }
 
-            if (!colisiono && !_accidenteForzado)
+          if (Posicion.X >= meta) // CAMBIO: usa meta fija en lugar de random.Value.Next(20, 50) cada iteración
             {
                 lock (consoleLock)
                 {

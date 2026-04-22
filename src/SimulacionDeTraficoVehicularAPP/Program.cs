@@ -23,7 +23,7 @@ namespace SimulacionDeTraficoVehicularAPP
             Console.WriteLine($"\nConfiguración lista: {maxProcesadores} procesadores asignados.");
             Console.WriteLine("Proyecto listo para la siguiente tarea.");
 
-            // Generación aleatoria de vehículos por zona usando Task
+            // Generacion aleatoria de vehiculos por zona usando Task
             var tipos = new[] { "Auto", "Bus", "Moto", "Camion" };
             var listaVehiculos = new List<Vehiculo>();
             int idCounter = 0;
@@ -72,18 +72,21 @@ namespace SimulacionDeTraficoVehicularAPP
             Console.WriteLine($"\nTotal vehículos generados: {listaVehiculos.Count}\n");
 
             // ─── VERSION SECUENCIAL (baseline) ───
+
             Console.WriteLine("\n[ Ejecutando version secuencial como baseline... ]\n");
             var semaforoSec = new Semaforo(id: 4, tiempoVerde: 3000, tiempoAmarillo: 1000, tiempoRojo: 3000);
             var detectorSec = new DetectorColisiones();
 
-            // TODO: HACER QUE GENERE VEHICULOS DE MANERA ALEATORIA USANDO TASK 
-            // TODO: CREAR 3 SEMAFOROS PARA CADA ZONA Y QUE SE PUEDA AGREGAR VEHICULOS EN ZONAS 
-            // TODO: AGREGAR TIPO DE VEHICULO CAMION
-            // TODO: QUE SE AGREGUEN DE MANERA ALEATORIA
 
             var vehiculosSec = listaVehiculos
                 .Select(v => new Vehiculo(v.Id, v.Tipo, v.Zona))
                 .ToList();
+
+            // agregar control por teclado al baseline secuencial
+            using var ctsSecuencial = new CancellationTokenSource();
+            var controladorSec = new ControladorTeclado(ctsSecuencial, vehiculosSec, vehiculosSec.Count);
+            var tareaEscuchaSec = controladorSec.IniciarEscuchaAsync();
+
 
             var swSec = Stopwatch.StartNew();
             foreach (var v in vehiculosSec)
@@ -93,12 +96,13 @@ namespace SimulacionDeTraficoVehicularAPP
             double tiempoSecuencial = swSec.Elapsed.TotalSeconds;
             Console.WriteLine($"\n Tiempo secuencial (version secuencial): {tiempoSecuencial:F2} ms\n");
 
+            Console.WriteLine("\n[Version secuencial terminada.]\n");
 
             // ─── VERSION PARALELA (baseline) ───
             // Semaforo compartido para todos los vehiculos
             var detector = new DetectorColisiones();
 
-            // 3 zonas con su propio semáforo, calle e intersección
+            // 3 zonas con su propio semaforo, calle e intersección
             var semaforoNorte = new Semaforo(id: 1, tiempoVerde: 3000, tiempoAmarillo: 1000, tiempoRojo: 3000);
             var semaforoSur = new Semaforo(id: 2, tiempoVerde: 2000, tiempoAmarillo: 1000, tiempoRojo: 4000);
             var semaforoCentro = new Semaforo(id: 3, tiempoVerde: 4000, tiempoAmarillo: 1000, tiempoRojo: 2000);
@@ -175,7 +179,7 @@ namespace SimulacionDeTraficoVehicularAPP
                         // No hay pendientes — espera un momento por si el usuario agrega uno
                         Thread.Sleep(300);
 
-                        // Si después de esperar sigue sin pendientes, termina
+                        // Si despues  de esperar sigue sin pendientes, termina
                         lock (listaVehiculos)
                         {
                             if (listaVehiculos.All(v => { lock (lockProcesados) { return vehiculosProcesados.Contains(v.Id); } }))
