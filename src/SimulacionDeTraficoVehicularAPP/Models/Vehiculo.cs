@@ -20,11 +20,13 @@ namespace SimulacionDeTraficoVehicularAPP.Models
         public string Tipo { get; }
         public int VelocidadActual { get; set; }
         public (int X, int Y) Posicion { get; set; }
+        public string Zona { get; }
 
-        public Vehiculo(int id, string tipo)
+        public Vehiculo(int id, string tipo, string zona = "Norte")
         {
             Id = id;
             Tipo = tipo;
+            Zona= zona;
             VelocidadActual = random.Value.Next(1, 5);
             Posicion = (0, 0);
         }
@@ -77,6 +79,7 @@ namespace SimulacionDeTraficoVehicularAPP.Models
                 "Moto" => random.Value.Next(3, 7),
                 "Auto" => random.Value.Next(2, 5),
                 "Bus" => random.Value.Next(1, 3),
+                "Camion" => random.Value.Next(1, 2),
                 _ => 2
             };
 
@@ -126,6 +129,7 @@ namespace SimulacionDeTraficoVehicularAPP.Models
                     "Moto" => 20, // mas riesgo
                     "Auto" => 10,
                     "Bus" => 5, // mas seguro
+                    "Camion" => 5,
                     _ => 10
                 };
 
