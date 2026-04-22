@@ -87,10 +87,42 @@ namespace SimulacionDeTraficoVehicularAPP
             var controladorSec = new ControladorTeclado(ctsSecuencial, vehiculosSec, vehiculosSec.Count);
             var tareaEscuchaSec = controladorSec.IniciarEscuchaAsync();
 
-
+            var vehiculosSecProcesados = new HashSet<int>();
             var swSec = Stopwatch.StartNew();
-            foreach (var v in vehiculosSec)
-                v.Simular(semaforoSec, detectorSec);
+
+
+            await Task.Run(() =>
+            {
+                while (!ctsSecuencial.Token.IsCancellationRequested)
+                {
+                    List<Vehiculo> pendientesSec;
+                    lock (vehiculosSec)
+                    {
+                        pendientesSec = vehiculosSec
+                            .Where(v => !vehiculosSecProcesados.Contains(v.Id))
+                            .ToList();
+                    }
+
+                    if (pendientesSec.Count > 0)
+                    {
+                        foreach (var v in pendientesSec)
+                        {
+                            if (ctsSecuencial.Token.IsCancellationRequested) break;
+                            vehiculosSecProcesados.Add(v.Id);
+                            v.Simular(semaforoSec, detectorSec, ctsSecuencial.Token);
+                        }
+                    }
+                    else
+                    {
+                        Thread.Sleep(300);
+                        lock (vehiculosSec)
+                        {
+                            if (vehiculosSec.All(v => vehiculosSecProcesados.Contains(v.Id)))
+                                break;
+                        }
+                    }
+                }
+            });
             swSec.Stop();
             semaforoSec.Detener();
             double tiempoSecuencial = swSec.Elapsed.TotalSeconds;
