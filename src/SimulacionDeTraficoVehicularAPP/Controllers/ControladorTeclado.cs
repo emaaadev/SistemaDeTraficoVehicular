@@ -63,6 +63,15 @@ namespace SimulacionDeTraficoVehicularAPP.Controllers
                         case ConsoleKey.Q:
                             Terminar();
                             return;
+                        case ConsoleKey.B:
+                            AgregarVehiculoEnZona("Sur");
+                            break;
+                        case ConsoleKey.P:
+                            AgregarVehiculoEnZona("Norte");
+                            break;
+                        case ConsoleKey.V:
+                            AgregarVehiculoEnZona("Centro");
+                            break;
                     }
                 }
             });
@@ -106,10 +115,23 @@ namespace SimulacionDeTraficoVehicularAPP.Controllers
             _cts.Cancel();
         }
 
+        private void AgregarVehiculoEnZona(string zona)
+        {
+            var tipos = new[] { "Auto", "Bus", "Moto", "Camion" };
+            int id = Interlocked.Increment(ref _nextId);
+            string tipo = tipos[new Random().Next(tipos.Length)];
+            var nuevo = new Vehiculo(id, tipo, zona);
+            lock (_listaVehiculos) { _listaVehiculos.Add(nuevo); }
+            Console.WriteLine($"\n[Teclado] Vehículo {id} ({tipo}) agregado en Zona {zona}.");
+        }
+
         private void MostrarMenu()
         {
             Console.WriteLine("\n--- Control de Simulación ---");
-            Console.WriteLine("  A = Agregar vehículo");
+            Console.WriteLine("  A = Agregar vehículo (zona aleatoria)");
+            Console.WriteLine("  B = Agregar vehículo en Zona Sur");
+            Console.WriteLine("  P = Agregar vehículo en Zona Norte");
+            Console.WriteLine("  V = Agregar vehículo en Zona Centro");
             Console.WriteLine("  F = Forzar accidente");
             Console.WriteLine("  Q = Terminar simulación");
             Console.WriteLine("-----------------------------\n");
