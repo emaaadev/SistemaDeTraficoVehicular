@@ -16,11 +16,17 @@ namespace SimulacionDeTraficoVehicularAPP.Models
 
         private volatile bool _accidenteForzado = false;
 
+        private static readonly string[] _destinos = { "Casa", "Trabajo", "Escuela", "Hospital", "Supermercado" };
+
         public int Id { get; }
         public string Tipo { get; }
         public int VelocidadActual { get; set; }
         public (int X, int Y) Posicion { get; set; }
         public string Zona { get; }
+
+        public string Destino { get; private set; }
+
+        
 
         public Vehiculo(int id, string tipo, string zona = "Norte")
         {
@@ -29,6 +35,18 @@ namespace SimulacionDeTraficoVehicularAPP.Models
             Zona= zona;
             VelocidadActual = random.Value.Next(1, 5);
             Posicion = (0, 0);
+            Destino = _destinos[random.Value!.Next(_destinos.Length)];
+        }
+
+        // Constructor nuevo para clonar conservando destino
+        public Vehiculo(int id, string tipo, string zona, string destino)
+        {
+            Id = id;
+            Tipo = tipo;
+            Zona = zona;
+            VelocidadActual = random.Value!.Next(1, 5);
+            Posicion = (0, 0);
+            Destino = destino;
         }
 
         public void Mover()
@@ -71,9 +89,9 @@ namespace SimulacionDeTraficoVehicularAPP.Models
 
         public void Simular(Semaforo semaforo, DetectorColisiones detector, CancellationToken token = default)
         {
-            // TODO: AQUI AGREGAR CAMION PON LA TASA DE ALEATORIEDAD QUE PREFIERAS
+            
             bool colisiono = false;
-
+            bool llego = false;
             int meta = random.Value.Next(20, 50); // CAMBIO: meta fija, antes estaba dentro del loop evaluandose cada iteracion
 
             int velocidadBase = Tipo switch
@@ -86,6 +104,17 @@ namespace SimulacionDeTraficoVehicularAPP.Models
             };
 
             VelocidadActual = velocidadBase;
+
+            // probabilidades reducidas para que la colision sea ocasional (1-2% por iteración)
+            // Ahora: Moto=2, Auto=1, Bus=1, Camion=1
+            int probabilidadColision = Tipo switch
+            {
+                "Moto" => 2,
+                "Auto" => 1,
+                "Bus" => 1,
+                "Camion" => 1,
+                _ => 1
+            };
 
             while (true)
             {
@@ -126,16 +155,7 @@ namespace SimulacionDeTraficoVehicularAPP.Models
                 // Liberar posicion anterior antes de moverse
                 detector.LiberarPosicion(this);
 
-                // probabilidades reducidas para que la colision sea ocasional (1-2% por iteración)
-                // Ahora: Moto=2, Auto=1, Bus=1, Camion=1
-                int probabilidadColision = Tipo switch
-                {
-                    "Moto" => 2, 
-                    "Auto" => 1,
-                    "Bus" => 1, 
-                    "Camion" => 1,
-                    _ => 1
-                };
+               
 
                 if (random.Value.Next(100) < probabilidadColision)
                 {
@@ -164,24 +184,24 @@ namespace SimulacionDeTraficoVehicularAPP.Models
                     break;
                 }
 
-                // Condicion de llegada (meta aleatoria)
-                if (Posicion.X >= random.Value.Next(20, 50))
+                if (Posicion.X >= meta)
                 {
-                    lock (consoleLock)
-                    {
-                        Console.WriteLine($"[Vehículo {Id} - {Tipo}] Llegó a su destino.\n");
-                    }
+                    llego = true; 
                     break;
                 }
+
+
             }
 
-          if (Posicion.X >= meta) // CAMBIO: usa meta fija en lugar de random.Value.Next(20, 50) cada iteración
+            if (!colisiono && !_accidenteForzado && llego)
             {
                 lock (consoleLock)
                 {
-                    Console.WriteLine($"[Vehículo {Id} - {Tipo}] Llegó a su destino.\n");
+                    Console.WriteLine($"[Vehículo {Id} - {Tipo}] Llegó a su destino: {Destino}.\n");
                 }
             }
+
+
         }
         public void ForzarAccidente()
         {
