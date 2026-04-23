@@ -14,8 +14,7 @@ namespace SimulacionDeTraficoVehicularAPP.Models
         private static readonly ThreadLocal<Random> random =
             new ThreadLocal<Random>(() => new Random());
 
-        private volatile bool _accidenteForzado = false;
-
+        
 
         public int Id { get; }
         public string Tipo { get; }
@@ -114,15 +113,7 @@ namespace SimulacionDeTraficoVehicularAPP.Models
 
 
                 // Ticket #7 - control por teclado
-                if (_accidenteForzado)
-                {
-                    lock (consoleLock)
-                    {
-                        Console.WriteLine($"[Vehículo {Id} - {Tipo}] Accidente forzado. Saliendo de la simulación.");
-                    }
-                    break;
-                }
-
+                
                 if (!semaforo.PuedeAvanzar())
                 {
                     if (Tipo == "Moto" && random.Value.Next(100) < 30)
@@ -168,13 +159,17 @@ namespace SimulacionDeTraficoVehicularAPP.Models
                         Console.WriteLine($"[COLISIÓN] Vehículo {Id} ({Tipo}) chocó con Vehículo {colisionCon.Id} ({colisionCon.Tipo}) en ({Posicion.X}, {Posicion.Y})");
                         Console.WriteLine($"Total colisiones hasta ahora: {DetectorColisiones.TotalColisiones}");
                     }
-                    colisiono = true; // <-- marcar colison
-                    break;
+                    colisiono = true;
+                    detector.LiberarPosicion(this);  // limpiar posición aquí mismo
+                    detector.EliminarVehiculo(Id);   // eliminar del registro
+                    return;                          // salir directo, sin pasar por el código de abajo
                 }
 
                 if (Posicion.X >= meta)
                 {
-                    llego = true; 
+                    detector.LiberarPosicion(this);  // liberar ANTES de marcar llegada
+                    detector.EliminarVehiculo(Id);   // eliminar del registro para que nadie choque con él
+                    llego = true;
                     break;
                 }
 
@@ -183,7 +178,7 @@ namespace SimulacionDeTraficoVehicularAPP.Models
 
             detector.LiberarPosicion(this);
 
-            if (!colisiono && !_accidenteForzado && llego)
+            if (!colisiono && llego)
             {
                 lock (consoleLock)
                 {
@@ -193,11 +188,6 @@ namespace SimulacionDeTraficoVehicularAPP.Models
 
 
         }
-        public void ForzarAccidente()
-        {
-            _accidenteForzado = true;
-        }
-
-        public bool TieneAccidente() => _accidenteForzado;
+       
     }
 }
