@@ -14,9 +14,9 @@ namespace SimulacionDeTraficoVehicularAPP
             Console.WriteLine("Simulador de Tráfico Vehicular \n");
 
             Console.WriteLine("\nSeleccione el destino de la exploracion:");
-            Console.WriteLine("1. Puerto Central (Distancia: 14km)");
-            Console.WriteLine("2. Aeropuerto     (Distancia: 9km)");
-            Console.WriteLine("3. Aduana         (Distancia: 7km)");
+            Console.WriteLine("1. Puerto Central (Distancia: 25km)");
+            Console.WriteLine("2. Aeropuerto     (Distancia: 15km)");
+            Console.WriteLine("3. Aduana         (Distancia: 5km)");
             Console.Write("Selección (1-3): ");
             string opcion = Console.ReadLine() ?? "1";
 
@@ -27,15 +27,15 @@ namespace SimulacionDeTraficoVehicularAPP
             {
                 case "2":
                     destinoUsuario = "Aeropuerto";
-                    distanciaMeta = 8;
+                    distanciaMeta = 15;
                     break;
                 case "3":
                     destinoUsuario = "Aduana";
-                    distanciaMeta = 7;
+                    distanciaMeta = 5;
                     break;
                 default:
                     destinoUsuario = "Puerto Central";
-                    distanciaMeta = 14;
+                    distanciaMeta = 25;
                     break;
             }
 
@@ -105,19 +105,38 @@ namespace SimulacionDeTraficoVehicularAPP
             // ─── VERSION SECUENCIAL (baseline) ───
 
             Console.WriteLine("\n[ Ejecutando version secuencial como baseline... ]\n");
-            var semaforoSec = new Semaforo(id: 4, tiempoVerde: 3000, tiempoAmarillo: 1000, tiempoRojo: 3000);
             var detectorSec = new DetectorColisiones();
 
-            int cantSec = new Random().Next(3, 16);
-            var vehiculosSec = listaVehiculos
-                .Select(v => new Vehiculo(v.Id, v.Tipo, v.Ruta, v.Destino, v.MetaDinamica))
-                .ToList();
+            // Infraestructura por ruta para el secuencial (igual que el paralelo)
+            var semaforoNorteSec = new Semaforo(id: 10, tiempoVerde: 3000, tiempoAmarillo: 1000, tiempoRojo: 3000);
+            var semaforoSurSec = new Semaforo(id: 20, tiempoVerde: 2000, tiempoAmarillo: 1000, tiempoRojo: 4000);
+            var semaforoCentroSec = new Semaforo(id: 30, tiempoVerde: 4000, tiempoAmarillo: 1000, tiempoRojo: 2000);
 
-            // agregar control por teclado al baseline secuencial
-            using var ctsSecuencial = new CancellationTokenSource();
-            var controladorSec = new ControladorTeclado(ctsSecuencial, vehiculosSec, vehiculosSec.Count, destinoUsuario,distanciaMeta);
+            var calleNorteSec = new Calle(10, "Ruta Norte", capacidadMaxima: 3);
+            var calleSurSec = new Calle(20, "Ruta Sur", capacidadMaxima: 3);
+            var calleCentroSec = new Calle(30, "Ruta Centro", capacidadMaxima: 3);
+
+            var interseccionNorteSec = new Interseccion(10, (5, 5), semaforoNorteSec, calleNorteSec, calleNorteSec);
+            var interseccionSurSec = new Interseccion(20, (10, 10), semaforoSurSec, calleSurSec, calleSurSec);
+            var interseccionCentroSec = new Interseccion(30, (15, 15), semaforoCentroSec, calleCentroSec, calleCentroSec);
+
+            var rutaInfraestructuraSec = new Dictionary<string, (Semaforo semaforo, Calle calle, Interseccion interseccion)>
+            {
+                { "Norte",  (semaforoNorteSec,  calleNorteSec,  interseccionNorteSec)  },
+                { "Sur",    (semaforoSurSec,    calleSurSec,    interseccionSurSec)    },
+                { "Centro", (semaforoCentroSec, calleCentroSec, interseccionCentroSec) }
+            };
+
+            var vehiculosSec = listaVehiculos
+            .Select(v => new Vehiculo(v.Id, v.Tipo, v.Ruta, v.Destino, v.MetaDinamica))
+            .OrderBy(v => v.Id)
+            .ToList();
+
+            var ctsSecuencial = new CancellationTokenSource();
+            var controladorSec = new ControladorTeclado(ctsSecuencial, vehiculosSec, vehiculosSec.Count, destinoUsuario, distanciaMeta);
             var tareaEscuchaSec = controladorSec.IniciarEscuchaAsync();
 
+            
             var vehiculosSecProcesados = new HashSet<int>();
             var swSec = Stopwatch.StartNew();
 
@@ -143,9 +162,19 @@ namespace SimulacionDeTraficoVehicularAPP
                     {
                         foreach (var v in pendientesSec)
                         {
+                            Console.WriteLine($"\n[ZONA {v.Ruta}] Iniciando vehículo {v.Id} ({v.Tipo}) — Destino: {v.Destino}");
                             if (ctsSecuencial.Token.IsCancellationRequested) break;
                             vehiculosSecProcesados.Add(v.Id);
-                            v.Simular(semaforoSec, detectorSec, ctsSecuencial.Token);
+
+                            var (semaforo, calle, interseccion) = rutaInfraestructuraSec[v.Ruta];
+
+                            bool entro = calle.Entrar(v);
+                            if (!entro) continue;
+
+                            interseccion.RegistrarVehiculo(v);
+                            v.Simular(semaforo, detectorSec, ctsSecuencial.Token);
+                            interseccion.LiberarVehiculo(v);
+                            calle.Salir(v);
 
                             completadosSecRuta[v.Ruta]++;
                             if (completadosSecRuta[v.Ruta] >= metaSecuencial)
@@ -167,7 +196,9 @@ namespace SimulacionDeTraficoVehicularAPP
                 }
             });
             swSec.Stop();
-            semaforoSec.Detener();
+            semaforoNorteSec.Detener();
+            semaforoSurSec.Detener();
+            semaforoCentroSec.Detener();
             double tiempoSecuencial = swSec.Elapsed.TotalSeconds;
             Console.WriteLine($"\n Tiempo secuencial (version secuencial): {tiempoSecuencial:F2} ms\n");
 
@@ -176,9 +207,9 @@ namespace SimulacionDeTraficoVehicularAPP
             // ─── VERSION PARALELA (baseline) ───
             // Semaforo compartido para todos los vehiculos
 
-            var listaParalela = vehiculosSec
-               .Select(v => new Vehiculo(v.Id, v.Tipo, v.Ruta, v.Destino ,v.MetaDinamica))
-               .ToList();
+            var listaParalela = listaVehiculos
+            .Select(v => new Vehiculo(v.Id, v.Tipo, v.Ruta, v.Destino, v.MetaDinamica))
+            .ToList();
 
             Console.WriteLine($"\nTotal vehiculos en simulacion paralela: {listaParalela.Count}\n");
 
@@ -256,6 +287,7 @@ namespace SimulacionDeTraficoVehicularAPP
                     {
                         Parallel.ForEach(pendientes, opciones, (vehiculo,state) =>
                         {
+                            Console.WriteLine($"\n[ZONA {vehiculo.Ruta}] Iniciando vehículo {vehiculo.Id} ({vehiculo.Tipo}) — Destino: {vehiculo.Destino}");
                             // Si otra zona ya gano la exploracion, abortamos inmediatamente
                             if (metaAlcanzada) { state.Stop(); return; }
 
@@ -331,9 +363,6 @@ namespace SimulacionDeTraficoVehicularAPP
             double speedup = tiempoSecuencial / tiempoParalelo;
             double eficiencia = speedup / maxProcesadores;
             
-            // ─── COMPARACION DE Rutas (descomposicion exploratoria) ───
-            var completadosPorRuta = new Dictionary<string, int>();
-
             // ─── COMPARACION DE Rutas (descomposicion exploratoria) ───
             var scoreRuta = new Dictionary<string, double>();
 
