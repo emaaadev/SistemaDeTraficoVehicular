@@ -57,7 +57,7 @@ namespace SimulacionDeTraficoVehicularAPP
             var listaVehiculos = new List<Vehiculo>();
             int idCounter = 0;
 
-            int cantidadPorRuta = 6; // Para la muestra y analisis de metricas y cuellos de botella
+            int cantidadPorRuta = 3; // Para la muestra y analisis de metricas y cuellos de botella
 
             var tareasGeneracion = new List<Task>
             {
@@ -143,7 +143,7 @@ namespace SimulacionDeTraficoVehicularAPP
 
             await Task.Run(() =>
             {
-                int metaSecuencial = 3;
+                int metaSecuencial = 1;
 
                 var completadosSecRuta = new Dictionary<string, int> { { "Norte", 0 }, { "Sur", 0 }, { "Centro", 0 } };
 
@@ -268,7 +268,7 @@ namespace SimulacionDeTraficoVehicularAPP
             var vehiculosProcesados = new HashSet<int>();
             var lockProcesados = new object();
 
-            int metaVehiculos = 3; // Buscamos la zona que complete 8 vehiculos primero
+            int metaVehiculos = 1; //
             bool metaAlcanzada = false;
 
             try
