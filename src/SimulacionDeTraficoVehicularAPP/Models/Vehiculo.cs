@@ -16,38 +16,27 @@ namespace SimulacionDeTraficoVehicularAPP.Models
 
         private volatile bool _accidenteForzado = false;
 
-        private static readonly string[] _destinos = { "Casa", "Trabajo", "Escuela", "Hospital", "Supermercado" };
 
         public int Id { get; }
         public string Tipo { get; }
         public int VelocidadActual { get; set; }
         public (int X, int Y) Posicion { get; set; }
-        public string Zona { get; }
-
+        public string Ruta { get; }
         public string Destino { get; private set; }
+        public int MetaDinamica { get; private set; }
 
-        
-
-        public Vehiculo(int id, string tipo, string zona = "Norte")
+        public Vehiculo(int id, string tipo, string ruta, string destino, int meta)
         {
             Id = id;
             Tipo = tipo;
-            Zona= zona;
+            Ruta = ruta;
             VelocidadActual = random.Value.Next(1, 5);
             Posicion = (0, 0);
-            Destino = _destinos[random.Value!.Next(_destinos.Length)];
+            Destino = destino;
+            this.MetaDinamica = meta;
         }
 
-        // Constructor nuevo para clonar conservando destino
-        public Vehiculo(int id, string tipo, string zona, string destino)
-        {
-            Id = id;
-            Tipo = tipo;
-            Zona = zona;
-            VelocidadActual = random.Value!.Next(1, 5);
-            Posicion = (0, 0);
-            Destino = destino;
-        }
+     
 
         public void Mover()
         {
@@ -92,15 +81,15 @@ namespace SimulacionDeTraficoVehicularAPP.Models
             
             bool colisiono = false;
             bool llego = false;
-            int meta = random.Value.Next(20, 50); // CAMBIO: meta fija, antes estaba dentro del loop evaluandose cada iteracion
+            int meta = this.MetaDinamica; // CAMBIO: meta fija, antes estaba dentro del loop evaluandose cada iteracion
 
             int velocidadBase = Tipo switch
             {
-                "Moto" => random.Value.Next(3, 7),
-                "Auto" => random.Value.Next(2, 5),
-                "Bus" => random.Value.Next(1, 3),
-                "Camion" => random.Value.Next(1, 2),
-                _ => 2
+                "Moto" => random.Value.Next(1, 3),
+                "Auto" => 1,
+                "Bus" => 1,
+                "Camion" => 1,
+                _ => 1
             };
 
             VelocidadActual = velocidadBase;
@@ -123,7 +112,6 @@ namespace SimulacionDeTraficoVehicularAPP.Models
                 if (token.IsCancellationRequested) return;
                 if (detector.EstaEliminado(Id)) return;
 
-                if (_accidenteForzado)
 
                 // Ticket #7 - control por teclado
                 if (_accidenteForzado)
@@ -192,6 +180,8 @@ namespace SimulacionDeTraficoVehicularAPP.Models
 
 
             }
+
+            detector.LiberarPosicion(this);
 
             if (!colisiono && !_accidenteForzado && llego)
             {

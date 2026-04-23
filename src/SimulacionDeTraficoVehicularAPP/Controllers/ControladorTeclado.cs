@@ -9,11 +9,16 @@ namespace SimulacionDeTraficoVehicularAPP.Controllers
         private int _nextId;
         private string _idBuffer = "";
 
-        public ControladorTeclado(CancellationTokenSource cts, List<Vehiculo> listaVehiculos, int nextId)
+        private readonly string _destinoActual;
+        private readonly int _metaActual;
+
+        public ControladorTeclado(CancellationTokenSource cts, List<Vehiculo> listaVehiculos, int nextId,string destino, int meta)
         {
             _cts = cts;
             _listaVehiculos = listaVehiculos;
             _nextId = nextId;
+            _destinoActual = destino;
+            _metaActual = meta;
         }
         public Task IniciarEscuchaAsync()
         {
@@ -64,13 +69,13 @@ namespace SimulacionDeTraficoVehicularAPP.Controllers
                             Terminar();
                             return;
                         case ConsoleKey.B:
-                            AgregarVehiculoEnZona("Sur");
+                            AgregarVehiculoEnRuta("Sur");
                             break;
                         case ConsoleKey.P:
-                            AgregarVehiculoEnZona("Norte");
+                            AgregarVehiculoEnRuta("Norte");
                             break;
                         case ConsoleKey.V:
-                            AgregarVehiculoEnZona("Centro");
+                            AgregarVehiculoEnRuta("Centro");
                             break;
                     }
                 }
@@ -82,12 +87,12 @@ namespace SimulacionDeTraficoVehicularAPP.Controllers
             var tipos = new[] { "Auto", "Bus", "Moto" };
             int id = Interlocked.Increment(ref _nextId);
             string tipo = tipos[id % 3];
-            var nuevo = new Vehiculo(id, tipo);
+            var nuevo = new Vehiculo(id, tipo, "Norte", _destinoActual, _metaActual);
             lock (_listaVehiculos)
             {
                 _listaVehiculos.Add(nuevo);
             }
-            Console.WriteLine($"\n[Teclado] Vehículo {id} ({tipo}) agregado a la simulación.");
+            Console.WriteLine($"\n[Teclado] Vehículo {id} ({tipo}) agregado a la ruta norte.");
         }
 
         private void EjecutarAccidente(int id)
@@ -115,23 +120,22 @@ namespace SimulacionDeTraficoVehicularAPP.Controllers
             _cts.Cancel();
         }
 
-        private void AgregarVehiculoEnZona(string zona)
+        private void AgregarVehiculoEnRuta(string ruta)
         {
             var tipos = new[] { "Auto", "Bus", "Moto", "Camion" };
             int id = Interlocked.Increment(ref _nextId);
             string tipo = tipos[new Random().Next(tipos.Length)];
-            var nuevo = new Vehiculo(id, tipo, zona);
+            var nuevo = new Vehiculo(id, tipo, ruta, _destinoActual, _metaActual);
             lock (_listaVehiculos) { _listaVehiculos.Add(nuevo); }
-            Console.WriteLine($"\n[Teclado] Vehículo {id} ({tipo}) agregado en Zona {zona}.");
+            Console.WriteLine($"\n[Teclado] Vehículo {id} ({tipo}) agregado en Ruta {ruta}.");
         }
 
         private void MostrarMenu()
         {
             Console.WriteLine("\n--- Control de Simulación ---");
-            Console.WriteLine("  A = Agregar vehículo (zona aleatoria)");
-            Console.WriteLine("  B = Agregar vehículo en Zona Sur");
-            Console.WriteLine("  P = Agregar vehículo en Zona Norte");
-            Console.WriteLine("  V = Agregar vehículo en Zona Centro");
+            Console.WriteLine("  B = Agregar vehículo en Ruta Sur");
+            Console.WriteLine("  P = Agregar vehículo en Ruta Norte");
+            Console.WriteLine("  V = Agregar vehículo en Ruta Centro");
             Console.WriteLine("  F = Forzar accidente");
             Console.WriteLine("  Q = Terminar simulación");
             Console.WriteLine("-----------------------------\n");
