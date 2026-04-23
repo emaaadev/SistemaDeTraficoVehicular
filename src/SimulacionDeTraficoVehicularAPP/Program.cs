@@ -28,48 +28,50 @@ namespace SimulacionDeTraficoVehicularAPP
             var listaVehiculos = new List<Vehiculo>();
             int idCounter = 0;
 
+            int cantidadPorZona = new Random().Next(3, 8);
+
             var tareasGeneracion = new List<Task>
             {
                 Task.Run(() =>
                 {
-                    int cant = new Random().Next(3, 10);
+                    int cant = cantidadPorZona;
                     for (int i = 0; i < cant; i++)
                     {
                         int id = Interlocked.Increment(ref idCounter);
                         string tipo = tipos[new Random().Next(tipos.Length)];
                         var v = new Vehiculo(id, tipo, "Norte");
                         lock (listaVehiculos) { listaVehiculos.Add(v); }
-                        Console.WriteLine($"[Norte] Vehículo {v.Id} ({v.Tipo}) generado — Task ID: {Task.CurrentId} — Hilo: {Thread.CurrentThread.ManagedThreadId}");
+                        Console.WriteLine($"[Norte] Vehículo {v.Id} ({v.Tipo}) - Destino: {v.Destino} — Task ID: {Task.CurrentId} — Hilo: {Thread.CurrentThread.ManagedThreadId}");
                     }
                 }),
                 Task.Run(() =>
                 {
-                    int cant = new Random().Next(3, 10);
+                    int cant = cantidadPorZona;
                     for (int i = 0; i < cant; i++)
                     {
                         int id = Interlocked.Increment(ref idCounter);
                         string tipo = tipos[new Random().Next(tipos.Length)];
                         var v = new Vehiculo(id, tipo, "Sur");
                         lock (listaVehiculos) { listaVehiculos.Add(v); }
-                        Console.WriteLine($"[Sur] Vehículo {v.Id} ({v.Tipo}) generado — Task ID: {Task.CurrentId} — Hilo: {Thread.CurrentThread.ManagedThreadId}");
+                        Console.WriteLine($"[Sur] Vehículo {v.Id} ({v.Tipo}) - Destino: {v.Destino} — Task ID: {Task.CurrentId} — Hilo: {Thread.CurrentThread.ManagedThreadId}");
                     }
                 }),
                 Task.Run(() =>
                 {
-                    int cant = new Random().Next(3, 10);
+                    int cant = cantidadPorZona;
                     for (int i = 0; i < cant; i++)
                     {
                         int id = Interlocked.Increment(ref idCounter);
                         string tipo = tipos[new Random().Next(tipos.Length)];
                         var v = new Vehiculo(id, tipo, "Centro");
                         lock (listaVehiculos) { listaVehiculos.Add(v); }
-                        Console.WriteLine($"[Centro] Vehículo {v.Id} ({v.Tipo}) generado — Task ID: {Task.CurrentId} — Hilo: {Thread.CurrentThread.ManagedThreadId}");
+                        Console.WriteLine($"[Centro] Vehículo {v.Id} ({v.Tipo}) - Destino: {v.Destino} — Task ID: {Task.CurrentId} — Hilo: {Thread.CurrentThread.ManagedThreadId}");
                     }
                 })
             };
 
             await Task.WhenAll(tareasGeneracion);
-            Console.WriteLine($"\nTotal vehículos generados: {listaVehiculos.Count}\n");
+            Console.WriteLine($"\nTotal vehiculos generados en simulacion secuencial: {listaVehiculos.Count}\n");
 
             // ─── VERSION SECUENCIAL (baseline) ───
 
@@ -77,9 +79,9 @@ namespace SimulacionDeTraficoVehicularAPP
             var semaforoSec = new Semaforo(id: 4, tiempoVerde: 3000, tiempoAmarillo: 1000, tiempoRojo: 3000);
             var detectorSec = new DetectorColisiones();
 
-
+            int cantSec = new Random().Next(3, 16);
             var vehiculosSec = listaVehiculos
-                .Select(v => new Vehiculo(v.Id, v.Tipo, v.Zona))
+                .Select(v => new Vehiculo(v.Id, v.Tipo, v.Zona, v.Destino))
                 .ToList();
 
             // agregar control por teclado al baseline secuencial
@@ -114,7 +116,7 @@ namespace SimulacionDeTraficoVehicularAPP
                     }
                     else
                     {
-                        Thread.Sleep(300);
+                        Thread.Sleep(50);
                         lock (vehiculosSec)
                         {
                             if (vehiculosSec.All(v => vehiculosSecProcesados.Contains(v.Id)))
@@ -132,6 +134,13 @@ namespace SimulacionDeTraficoVehicularAPP
 
             // ─── VERSION PARALELA (baseline) ───
             // Semaforo compartido para todos los vehiculos
+
+            var listaParalela = vehiculosSec
+               .Select(v => new Vehiculo(v.Id, v.Tipo, v.Zona, v.Destino))
+               .ToList();
+
+            Console.WriteLine($"\nTotal vehiculos en simulacion paralela: {listaParalela.Count}\n");
+
             var detector = new DetectorColisiones();
 
             // 3 zonas con su propio semaforo, calle e intersección
@@ -157,6 +166,18 @@ namespace SimulacionDeTraficoVehicularAPP
             // Contador de vehiculos completados
             int vehiculosCompletados = 0;
 
+            var completadosZona = new System.Collections.Concurrent.ConcurrentDictionary<string, int>();
+            var colisionesZona = new System.Collections.Concurrent.ConcurrentDictionary<string, int>();
+
+            foreach (var zona in new[] { "Norte", "Sur", "Centro" })
+            {
+                completadosZona[zona] = 0;
+                colisionesZona[zona] = 0;
+            }
+
+
+
+
             // Medicion de CPU
             var proceso = Process.GetCurrentProcess();
             var cpuInicio = proceso.TotalProcessorTime;
@@ -180,9 +201,9 @@ namespace SimulacionDeTraficoVehicularAPP
                 while (!cts.Token.IsCancellationRequested)
                 {
                     List<Vehiculo> pendientes;
-                    lock (listaVehiculos)
+                    lock (listaParalela)
                     {
-                        pendientes = listaVehiculos
+                        pendientes = listaParalela
                             .Where(v => { lock (lockProcesados) { return !vehiculosProcesados.Contains(v.Id); } })
                             .ToList();
                     }
@@ -204,17 +225,25 @@ namespace SimulacionDeTraficoVehicularAPP
                             calle.Salir(vehiculo);
 
                             Interlocked.Increment(ref vehiculosCompletados);
+
+                            completadosZona.AddOrUpdate(vehiculo.Zona, 1, (k, old) => old + 1);
+
+                            // contar colisiones por zona
+                            if (detector.EstaEliminado(vehiculo.Id))
+                            {
+                                colisionesZona.AddOrUpdate(vehiculo.Zona, 1, (k, old) => old + 1);
+                            }
                         });
                     }
                     else
                     {
                         // No hay pendientes — espera un momento por si el usuario agrega uno
-                        Thread.Sleep(300);
+                        Thread.Sleep(50);
 
                         // Si despues  de esperar sigue sin pendientes, termina
-                        lock (listaVehiculos)
+                        lock (listaParalela)
                         {
-                            if (listaVehiculos.All(v => { lock (lockProcesados) { return vehiculosProcesados.Contains(v.Id); } }))
+                            if (listaParalela.All(v => { lock (lockProcesados) { return vehiculosProcesados.Contains(v.Id); } }))
                                 break;
                         }
                     }
@@ -242,7 +271,42 @@ namespace SimulacionDeTraficoVehicularAPP
             double tiempoParalelo = stopwatch.Elapsed.TotalSeconds;
             double speedup = tiempoSecuencial / tiempoParalelo;
             double eficiencia = speedup / maxProcesadores;
+            
+            // ─── COMPARACION DE ZONAS (descomposicion exploratoria) ───
+            var completadosPorZona = new Dictionary<string, int>();
+            
+            var scoreZona = new Dictionary<string, double>();
 
+            foreach (var zona in completadosZona.Keys)
+            {
+                int completados = completadosZona[zona];
+                int colisiones = colisionesZona[zona];
+
+                double score = (completados + 1.0) / (colisiones + 1.0); ; // puedes ajustar el peso
+
+                scoreZona[zona] = score;
+            }
+
+            string mejorZona = scoreZona.OrderByDescending(z => z.Value).First().Key;
+
+
+            Console.WriteLine("\n╔════════════════════════════════════════════════════════════╗");
+            Console.WriteLine("║ ZONA    │ COMPLETADOS │ COLISIONES │ SCORE   │ MEJOR       ║");
+            Console.WriteLine("╠════════════════════════════════════════════════════════════╣");
+            foreach (var zona in scoreZona)
+            {
+                string nombreZona = zona.Key;
+                int completados = completadosZona[nombreZona];
+                int colisiones = colisionesZona[nombreZona];
+                double score = zona.Value;
+
+                string indicador = nombreZona == mejorZona ? "SI" : "  ";
+
+                Console.WriteLine($"║ {nombreZona,-7} │ {completados,11} │ {colisiones,10} │ {score,7:F2} │ {indicador,-11}║");
+            }
+            Console.WriteLine("╠════════════════════════════════════════════════════════════╣");
+            Console.WriteLine($"║ Mejor zona para transitar: {mejorZona,-34}║");
+            Console.WriteLine("╚════════════════════════════════════════════════════════════╝");
             Console.WriteLine("\n╔══════════════════════════════════════════╗");
             Console.WriteLine("║       REPORTE FINAL DE SIMULACIÓN        ║");
             Console.WriteLine("╠══════════════════════════════════════════╣");
