@@ -28,6 +28,7 @@ namespace SimulacionDeTraficoVehicularAPP.Models
                 if (_posiciones.TryGetValue(pos, out IVehiculo? otro) && otro.Id != vehiculo.Id)
                 {
                     Interlocked.Increment(ref _contadorColisiones);
+                    _colisionesPorRuta.AddOrUpdate(vehiculo.Ruta, 1, (k, old) => old + 1);
                     _posiciones.Remove(pos);
                     EliminarVehiculo(vehiculo.Id);  // <-- eliminar ambos
                     EliminarVehiculo(otro.Id);

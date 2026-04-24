@@ -35,7 +35,7 @@ namespace SimulacionDeTraficoVehicularAPP.Models
             this.MetaDinamica = meta;
         }
 
-     
+
 
         public void Mover()
         {
@@ -43,7 +43,7 @@ namespace SimulacionDeTraficoVehicularAPP.Models
 
             lock (consoleLock)
             {
-                Console.WriteLine($"[Vehiculo {Id} - {Tipo}] Avanza a ({Posicion.X}, {Posicion.Y}) - Sin razon especificada.");
+                Console.WriteLine($"[Vehículo {Id} - {Tipo}] Avanza a ({Posicion.X}, {Posicion.Y})");
             }
         }
 
@@ -56,14 +56,21 @@ namespace SimulacionDeTraficoVehicularAPP.Models
         }
 
 
-
         public void Mover(string razon)
+        {
+            Posicion = (Posicion.X + VelocidadActual, Posicion.Y);
+            lock (consoleLock)
+            {
+                Console.WriteLine($"[Vehículo {Id} - {Tipo}] Avanza a ({Posicion.X}, {Posicion.Y}) - {razon}");
+            }
+        }
+        public void Mover(string razon, string nombreCalle)
         {
             Posicion = (Posicion.X + VelocidadActual, Posicion.Y);
 
             lock (consoleLock)
             {
-                Console.WriteLine($"[Vehículo {Id} - {Tipo}] Avanza a ({Posicion.X}, {Posicion.Y}) - {razon}");
+                Console.WriteLine($"[Vehículo {Id} - {Tipo}] [{nombreCalle}] Avanza a ({Posicion.X}, {Posicion.Y}) - {razon}");
             }
         }
 
@@ -75,7 +82,7 @@ namespace SimulacionDeTraficoVehicularAPP.Models
             }
         }
 
-        public void Simular(Semaforo semaforo, DetectorColisiones detector, CancellationToken token = default)
+        public void Simular(Semaforo semaforo, DetectorColisiones detector, string nombreCalle, CancellationToken token = default)
         {
             
             bool colisiono = false;
@@ -118,7 +125,7 @@ namespace SimulacionDeTraficoVehicularAPP.Models
                 {
                     if (Tipo == "Moto" && random.Value.Next(100) < 30)
                     {
-                        Mover("Ignora semaforo (Moto)");
+                        Mover("Ignora semaforo (Moto)", nombreCalle);
                     }
                     else
                     {
@@ -147,7 +154,7 @@ namespace SimulacionDeTraficoVehicularAPP.Models
                     break;
                 }
 
-                Mover("Vía libre");
+                Mover("Vía libre", nombreCalle);
 
                 // Registrar nueva posicion y verificar colision
                 var colisionCon = detector.RegistrarPosicion(this);

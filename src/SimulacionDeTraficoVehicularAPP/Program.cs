@@ -112,13 +112,13 @@ namespace SimulacionDeTraficoVehicularAPP
             var semaforoSurSec = new Semaforo(id: 20, tiempoVerde: 2000, tiempoAmarillo: 1000, tiempoRojo: 4000);
             var semaforoCentroSec = new Semaforo(id: 30, tiempoVerde: 4000, tiempoAmarillo: 1000, tiempoRojo: 2000);
 
-            var calleNorteSec = new Calle(10, "Ruta Norte", capacidadMaxima: 3);
-            var calleSurSec = new Calle(20, "Ruta Sur", capacidadMaxima: 3);
-            var calleCentroSec = new Calle(30, "Ruta Centro", capacidadMaxima: 3);
+            var calleNorteSec = new Calle(10, "Norte", capacidadMaxima: 3);
+            var calleSurSec = new Calle(20, "Sur", capacidadMaxima: 3);
+            var calleCentroSec = new Calle(30, "Centro", capacidadMaxima: 3);
 
-            var interseccionNorteSec = new Interseccion(10, (5, 5), semaforoNorteSec, calleNorteSec, calleNorteSec);
-            var interseccionSurSec = new Interseccion(20, (10, 10), semaforoSurSec, calleSurSec, calleSurSec);
-            var interseccionCentroSec = new Interseccion(30, (15, 15), semaforoCentroSec, calleCentroSec, calleCentroSec);
+            var interseccionNorteSec = new Interseccion(10, (5, 5), semaforoNorteSec, calleNorteSec, calleNorteSec, "interseccion Norte");
+            var interseccionSurSec = new Interseccion(20, (10, 10), semaforoSurSec, calleSurSec, calleSurSec, "interseccion Sur");
+            var interseccionCentroSec = new Interseccion(30, (15, 15), semaforoCentroSec, calleCentroSec, calleCentroSec, "interseccion Centro");
 
             var rutaInfraestructuraSec = new Dictionary<string, (Semaforo semaforo, Calle calle, Interseccion interseccion)>
             {
@@ -172,7 +172,7 @@ namespace SimulacionDeTraficoVehicularAPP
                             if (!entro) continue;
 
                             interseccion.RegistrarVehiculo(v);
-                            v.Simular(semaforo, detectorSec, ctsSecuencial.Token);
+                            v.Simular(semaforo, detectorSec, calle.Nombre, ctsSecuencial.Token);
                             interseccion.LiberarVehiculo(v);
                             calle.Salir(v);
 
@@ -213,20 +213,29 @@ namespace SimulacionDeTraficoVehicularAPP
 
             Console.WriteLine($"\nTotal vehiculos en simulacion paralela: {listaParalela.Count}\n");
 
-            var detector = new DetectorColisiones();
+            var detectorNorte = new DetectorColisiones();
+            var detectorSur = new DetectorColisiones();
+            var detectorCentro = new DetectorColisiones();
+
+            var rutaDetector = new Dictionary<string, DetectorColisiones>
+            {
+                { "Norte",  detectorNorte  },
+                { "Sur",    detectorSur    },
+                { "Centro", detectorCentro }
+            };
 
             // 3 zonas con su propio semaforo, calle e intersección
             var semaforoNorte = new Semaforo(id: 1, tiempoVerde: 3000, tiempoAmarillo: 1000, tiempoRojo: 3000);
             var semaforoSur = new Semaforo(id: 2, tiempoVerde: 2000, tiempoAmarillo: 1000, tiempoRojo: 4000);
             var semaforoCentro = new Semaforo(id: 3, tiempoVerde: 4000, tiempoAmarillo: 1000, tiempoRojo: 2000);
 
-            var calleNorte = new Calle(1, "Ruta Norte", capacidadMaxima: 3);
-            var calleSur = new Calle(2, "Ruta Sur", capacidadMaxima: 3);
-            var calleCentro = new Calle(3, "Ruta Centro", capacidadMaxima: 3);
+            var calleNorte = new Calle(1, "Norte", capacidadMaxima: 3);
+            var calleSur = new Calle(2, "Sur", capacidadMaxima: 3);
+            var calleCentro = new Calle(3, "Centro", capacidadMaxima: 3);
 
-            var interseccionNorte = new Interseccion(1, (5, 5), semaforoNorte, calleNorte, calleNorte);
-            var interseccionSur = new Interseccion(2, (10, 10), semaforoSur, calleSur, calleSur);
-            var interseccionCentro = new Interseccion(3, (15, 15), semaforoCentro, calleCentro, calleCentro);
+            var interseccionNorte = new Interseccion(1, (5, 5), semaforoNorte, calleNorte, calleNorte, "interseccion Norte");
+            var interseccionSur = new Interseccion(2, (10, 10), semaforoSur, calleSur, calleSur, "interseccion Sur");
+            var interseccionCentro = new Interseccion(3, (15, 15), semaforoCentro, calleCentro, calleCentro, "interseccion Centro");
 
             var rutaInfraestructura = new Dictionary<string, (Semaforo semaforo, Calle calle, Interseccion interseccion)>
         {
@@ -299,7 +308,8 @@ namespace SimulacionDeTraficoVehicularAPP
                             if (!entro) return;
 
                             interseccion.RegistrarVehiculo(vehiculo);
-                            vehiculo.Simular(semaforo, detector, cts.Token);
+                            var detectorRuta = rutaDetector[vehiculo.Ruta];
+                            vehiculo.Simular(semaforo, detectorRuta, calle.Nombre, cts.Token);
                             interseccion.LiberarVehiculo(vehiculo);
                             calle.Salir(vehiculo);
 
@@ -317,7 +327,7 @@ namespace SimulacionDeTraficoVehicularAPP
                             }
 
                             // contar colisiones por zona
-                            if (detector.EstaEliminado(vehiculo.Id))
+                            if (detectorRuta.EstaEliminado(vehiculo.Id))
                             {
                                 colisionesRuta.AddOrUpdate(vehiculo.Ruta, 1, (k, old) => old + 1);
                             }
@@ -393,7 +403,7 @@ namespace SimulacionDeTraficoVehicularAPP
             {
                 string nombreRuta = ruta.Key;
                 int completados = completadosRuta[nombreRuta];
-                int colisiones = colisionesRuta[nombreRuta];
+                int colisiones = DetectorColisiones.ColisionesEnRuta(nombreRuta);
                 double score = ruta.Value;
 
                 string indicador = nombreRuta == mejorRuta ? "SI" : "  ";
