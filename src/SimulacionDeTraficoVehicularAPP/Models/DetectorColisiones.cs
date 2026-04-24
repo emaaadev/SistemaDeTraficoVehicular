@@ -1,4 +1,5 @@
 ﻿using SimulacionDeTraficoVehicularAPP.Interfaces;
+using System.Collections.Concurrent;
 
 namespace SimulacionDeTraficoVehicularAPP.Models
 {
@@ -8,7 +9,14 @@ namespace SimulacionDeTraficoVehicularAPP.Models
         private readonly Dictionary<(int X, int Y), IVehiculo> _posiciones = new();
         private static int _contadorColisiones = 0;
 
+        private static readonly ConcurrentDictionary<string, int> _colisionesPorRuta = new();
+
         public static int TotalColisiones => _contadorColisiones;
+
+        public static int ColisionesEnRuta(string ruta)
+        {
+            return _colisionesPorRuta.TryGetValue(ruta, out int cantidad) ? cantidad : 0;
+        }
 
         // Retorna el vehiculo con el que colisiono, o null si no hay colision
         public IVehiculo? RegistrarPosicion(IVehiculo vehiculo)
@@ -20,6 +28,7 @@ namespace SimulacionDeTraficoVehicularAPP.Models
                 if (_posiciones.TryGetValue(pos, out IVehiculo? otro) && otro.Id != vehiculo.Id)
                 {
                     Interlocked.Increment(ref _contadorColisiones);
+                    _colisionesPorRuta.AddOrUpdate(vehiculo.Ruta, 1, (k, old) => old + 1);
                     _posiciones.Remove(pos);
                     EliminarVehiculo(vehiculo.Id);  // <-- eliminar ambos
                     EliminarVehiculo(otro.Id);
