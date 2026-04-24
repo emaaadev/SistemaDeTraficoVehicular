@@ -88,7 +88,7 @@ namespace SimulacionDeTraficoVehicularAPP.Models
 
             int velocidadBase = Tipo switch
             {
-                "Moto" => random.Value.Next(1, 3),
+                "Moto" => 1,
                 "Auto" => 1,
                 "Bus" => 1,
                 "Camion" => 1,
