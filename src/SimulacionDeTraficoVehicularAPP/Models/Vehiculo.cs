@@ -14,8 +14,6 @@ namespace SimulacionDeTraficoVehicularAPP.Models
         private static readonly ThreadLocal<Random> random =
             new ThreadLocal<Random>(() => new Random());
 
-        
-
         public int Id { get; }
         public string Tipo { get; }
         public int VelocidadActual { get; set; }
@@ -54,7 +52,6 @@ namespace SimulacionDeTraficoVehicularAPP.Models
                 Console.WriteLine($"[Vehiculo {Id} - {Tipo}] Se detiene en ({Posicion.X}, {Posicion.Y}) - Sin razon especificada.");
             }
         }
-
 
         public void Mover(string razon)
         {
@@ -192,7 +189,6 @@ namespace SimulacionDeTraficoVehicularAPP.Models
                     Console.WriteLine($"[Vehículo {Id} - {Tipo}] Llegó a su destino: {Destino}.\n");
                 }
             }
-
 
         }
        
