@@ -12,10 +12,12 @@ namespace SimulacionDeTraficoVehicularAPP.Models
         public ISemaforo Semaforo { get; }
         public Calle CalleEntrada { get; }
         public Calle CalleSalida { get; }
+        public string Nombre { get; }
 
-        public Interseccion(int id, (int X, int Y) coordenadas, ISemaforo semaforo, Calle calleEntrada, Calle calleSalida)
+        public Interseccion(int id, (int X, int Y) coordenadas, ISemaforo semaforo, Calle calleEntrada, Calle calleSalida, string nombre)
         {
             Id = id;
+            Nombre = nombre;
             Coordenadas = coordenadas;
             Semaforo = semaforo;
             CalleEntrada = calleEntrada;
@@ -41,7 +43,7 @@ namespace SimulacionDeTraficoVehicularAPP.Models
                 }
 
                 _vehiculosEnInterior.Add(vehiculo.Id);
-                Console.WriteLine($"[Intersección {Id}] Vehículo {vehiculo.Id} ({vehiculo.Tipo}) entró a la intersección. Vehículos dentro: {_vehiculosEnInterior.Count}");
+               Console.WriteLine($"[{Nombre}] Vehículo {vehiculo.Id} ({vehiculo.Tipo}) entró a la intersección. Vehículos dentro: {_vehiculosEnInterior.Count}");
             }
         }
 
@@ -50,7 +52,7 @@ namespace SimulacionDeTraficoVehicularAPP.Models
             lock (_lock)
             {
                 _vehiculosEnInterior.Remove(vehiculo.Id);
-                Console.WriteLine($"[Intersección {Id}] Vehículo {vehiculo.Id} ({vehiculo.Tipo}) salió de la intersección. Vehículos dentro: {_vehiculosEnInterior.Count}");
+                Console.WriteLine($"[{Nombre}] Vehículo {vehiculo.Id} ({vehiculo.Tipo}) salió de la intersección. Vehículos dentro: {_vehiculosEnInterior.Count}");
             }
         }
 
