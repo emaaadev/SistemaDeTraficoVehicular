@@ -279,6 +279,9 @@ namespace SimulacionDeTraficoVehicularAPP
 
             int metaVehiculos = 2; 
             bool metaAlcanzada = false;
+            int estadoMeta = 0;
+            string rutaGanadoraOficial = "Sin Ganador";
+
 
             try
             {
@@ -298,7 +301,7 @@ namespace SimulacionDeTraficoVehicularAPP
                         {
                             Console.WriteLine($"\n[RUTA {vehiculo.Ruta}] Iniciando vehículo {vehiculo.Id} ({vehiculo.Tipo}) — Destino: {vehiculo.Destino}");
                             // Si otra ruta ya gano la exploracion, abortamos inmediatamente
-                            if (metaAlcanzada) { state.Stop(); return; }
+                            if (Volatile.Read(ref estadoMeta) == 1) { state.Stop(); return; }
 
                             lock (lockProcesados) { vehiculosProcesados.Add(vehiculo.Id); }
 
@@ -320,10 +323,14 @@ namespace SimulacionDeTraficoVehicularAPP
                           
                             if (totalRuta >= metaVehiculos)
                             {
-                                metaAlcanzada = true;
-                                Console.WriteLine($"\n[EXPLORACION] ¡Ruta {vehiculo.Ruta} completo la meta! Deteniendo busqueda paralela...");
-                                state.Stop();  // Detiene el bucle Parallel
-                                cts.Cancel();  // Cancela hilos externos y simulación
+                                if (Interlocked.CompareExchange(ref estadoMeta, 1, 0) == 0)
+                                {
+                                    metaAlcanzada = true;
+                                    rutaGanadoraOficial = vehiculo.Ruta;
+                                    Console.WriteLine($"\n[EXPLORACION] ¡Ruta {vehiculo.Ruta} completo la meta! Deteniendo busqueda paralela...");
+                                    state.Stop();  // Detiene el bucle Parallel
+                                    cts.Cancel();  // Cancela hilos externos y simulación
+                                }
                             }
 
                             // contar colisiones por zona
@@ -389,16 +396,17 @@ namespace SimulacionDeTraficoVehicularAPP
                 scoreRuta[ruta] = score;
             }
 
-            // 1. Encontramos el score mas alto (Velocidad + Seguridad)
-            double scoreMaximo = scoreRuta.Values.Max();
+            // En Testing Por el momento para futura mejora           
+            //// 1. Encontramos el score mas alto (Velocidad + Seguridad)
+            //double scoreMaximo = scoreRuta.Values.Max();
 
-            // 2. Filtramos todas las rutas que lograron ese score exacto
-            var rutasGanadoras = scoreRuta.Where(r => r.Value == scoreMaximo).Select(r => r.Key).ToList();
+            //// 2. Filtramos todas las rutas que lograron ese score exacto
+            //var rutasGanadoras = scoreRuta.Where(r => r.Value == scoreMaximo).Select(r => r.Key).ToList();
 
-            // 3. Formateamos el texto: detecta automaticamente si hay 1 ganador o un empate
-            string mejorRutaDisplay = rutasGanadoras.Count > 1
-                ? "Ambas " + string.Join(" y ", rutasGanadoras)
-                : rutasGanadoras[0];
+            //// 3. Formateamos el texto: detecta automaticamente si hay 1 ganador o un empate
+            //string mejorRutaDisplay = rutasGanadoras.Count > 1
+            //    ? "Ambas " + string.Join(" y ", rutasGanadoras)
+            //    : rutasGanadoras[0];
 
 
 
@@ -413,12 +421,14 @@ namespace SimulacionDeTraficoVehicularAPP
                 double score = ruta.Value;
 
                 // Validamos si la ruta actual esta en la lista de ganadoras para ponerle el "SI"
-                string indicador = rutasGanadoras.Contains(nombreRuta) ? "SI" : "  ";
+                //string indicador = rutasGanadoras.Contains(nombreRuta) ? "SI" : "  ";
+
+                string indicador = (nombreRuta == rutaGanadoraOficial) ? "GANADOR" : "PERDEDOR";
 
                 Console.WriteLine($"║ {nombreRuta,-7} │ {completados,11} │ {colisiones,10} │ {score,7:F2} │ {indicador,-11}║");
             }
             Console.WriteLine("╠════════════════════════════════════════════════════════════╣");
-            Console.WriteLine($"║ Mejor ruta para llegar: {mejorRutaDisplay,-45}║");
+            Console.WriteLine($"║ Mejor ruta para llegar: {rutaGanadoraOficial,-45}║");
             Console.WriteLine("╚════════════════════════════════════════════════════════════╝");
             Console.WriteLine("\n╔══════════════════════════════════════════╗");
             Console.WriteLine("║       REPORTE FINAL DE SIMULACIÓN        ║");
